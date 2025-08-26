@@ -1,0 +1,249 @@
+{% extends "base.html" %}
+
+{% block title %}Compare Athletes - Ultra Smart Analytics{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('landing') }}">Home</a></li>
+                <li class="breadcrumb-item active">Compare Athletes</li>
+            </ol>
+        </nav>
+
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1><i class="fas fa-chart-line"></i> Compare Athletes</h1>
+            <a href="{{ url_for('landing') }}" class="btn btn-outline-primary">
+                <i class="fas fa-arrow-left"></i> Back to Dashboard
+            </a>
+        </div>
+
+        {% if not athletes %}
+            <div class="alert alert-warning" role="alert">
+                <i class="fas fa-exclamation-triangle"></i> 
+                No athletes found. Please add athlete data to compare.
+            </div>
+        {% else %}
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-users"></i> Select Athletes to Compare</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted mb-3">
+                        Select 2 or more athletes to compare their performance. 
+                        You can compare up to 5 athletes at once.
+                    </p>
+                    
+                    <form id="comparison-form">
+                        <div class="row">
+                            {% for athlete in athletes %}
+                            <div class="col-md-6 col-lg-4 mb-3">
+                                <div class="athlete-select-card" onclick="toggleAthlete('{{ athlete.id }}')">
+                                    <input class="form-check-input" 
+                                           type="checkbox" 
+                                           name="athletes" 
+                                           value="{{ athlete.id }}" 
+                                           id="athlete-{{ athlete.id }}"
+                                           onchange="updateCompareButton()">
+                                    <div class="card h-100">
+                                        <div class="card-body">
+                                            <h6 class="card-title">{{ athlete.name }}</h6>
+                                            <div class="athlete-meta">
+                                                <small class="text-muted">
+                                                    <i class="fas fa-map-marker-alt"></i> {{ athlete.location }}<br>
+                                                    <i class="fas fa-calendar"></i> {{ athlete.race }} {{ athlete.year }}<br>
+                                                    <i class="fas fa-birthday-cake"></i> {{ athlete.age }} years old
+                                                </small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="mt-4">
+                            <button type="submit" 
+                                    class="btn btn-success btn-lg" 
+                                    id="compare-btn" 
+                                    disabled>
+                                <i class="fas fa-chart-line"></i> 
+                                Compare Selected Athletes (<span id="selected-count">0</span>)
+                            </button>
+                            
+                            <button type="button" 
+                                    class="btn btn-outline-secondary ms-2" 
+                                    onclick="clearSelection()">
+                                <i class="fas fa-times"></i> Clear Selection
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Quick Select Options -->
+            <div class="row mt-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header bg-info text-white">
+                            <h6 class="mb-0"><i class="fas fa-magic"></i> Quick Select</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="btn-group" role="group">
+                                <button type="button" 
+                                        class="btn btn-outline-info btn-sm" 
+                                        onclick="selectAll()">
+                                    <i class="fas fa-check-double"></i> Select All
+                                </button>
+                                <button type="button" 
+                                        class="btn btn-outline-info btn-sm" 
+                                        onclick="selectByRace('Cocodona 250')">
+                                    <i class="fas fa-mountain"></i> Cocodona 250 Only
+                                </button>
+                                <button type="button" 
+                                        class="btn btn-outline-info btn-sm" 
+                                        onclick="selectByYear('2025')">
+                                    <i class="fas fa-calendar"></i> 2025 Only
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+function toggleAthlete(athleteId) {
+    const checkbox = document.getElementById(`athlete-${athleteId}`);
+    if (!checkbox.disabled) {
+        checkbox.checked = !checkbox.checked;
+        // Trigger the change event to ensure all event handlers are called
+        checkbox.dispatchEvent(new Event('change'));
+    }
+}
+
+function updateCompareButton() {
+    const checkboxes = document.querySelectorAll('input[name="athletes"]:checked');
+    const count = checkboxes.length;
+    const btn = document.getElementById('compare-btn');
+    const countSpan = document.getElementById('selected-count');
+    
+    console.log('Update button - selected count:', count); // Debug log
+    
+    countSpan.textContent = count;
+    btn.disabled = count < 2;
+    
+    if (count > 5) {
+        // Disable additional selections if more than 5 selected
+        const unchecked = document.querySelectorAll('input[name="athletes"]:not(:checked)');
+        unchecked.forEach(cb => cb.disabled = true);
+        btn.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Too many selected (max 5)';
+        btn.disabled = true;
+        btn.className = 'btn btn-warning btn-lg';
+    } else {
+        // Re-enable all checkboxes
+        const all = document.querySelectorAll('input[name="athletes"]');
+        all.forEach(cb => cb.disabled = false);
+        btn.innerHTML = `<i class="fas fa-chart-line"></i> Compare Selected Athletes (<span id="selected-count">${count}</span>)`;
+        btn.className = 'btn btn-success btn-lg';
+    }
+}
+
+function clearSelection() {
+    const checkboxes = document.querySelectorAll('input[name="athletes"]');
+    checkboxes.forEach(cb => {
+        cb.checked = false;
+        cb.disabled = false;
+    });
+    updateCompareButton();
+}
+
+function selectAll() {
+    const checkboxes = document.querySelectorAll('input[name="athletes"]');
+    const limit = Math.min(checkboxes.length, 5);
+    
+    clearSelection();
+    for (let i = 0; i < limit; i++) {
+        checkboxes[i].checked = true;
+        checkboxes[i].dispatchEvent(new Event('change'));
+    }
+}
+
+function selectByRace(raceName) {
+    clearSelection();
+    const athletes = {{ athletes | tojson }};
+    const raceAthletes = athletes.filter(a => a.race.includes(raceName));
+    const limit = Math.min(raceAthletes.length, 5);
+    
+    for (let i = 0; i < limit; i++) {
+        const checkbox = document.getElementById(`athlete-${raceAthletes[i].id}`);
+        if (checkbox) {
+            checkbox.checked = true;
+            checkbox.dispatchEvent(new Event('change'));
+        }
+    }
+}
+
+function selectByYear(year) {
+    clearSelection();
+    const athletes = {{ athletes | tojson }};
+    const yearAthletes = athletes.filter(a => a.year === year);
+    const limit = Math.min(yearAthletes.length, 5);
+    
+    for (let i = 0; i < limit; i++) {
+        const checkbox = document.getElementById(`athlete-${yearAthletes[i].id}`);
+        if (checkbox) {
+            checkbox.checked = true;
+            checkbox.dispatchEvent(new Event('change'));
+        }
+    }
+}
+
+document.getElementById('comparison-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    const params = new URLSearchParams();
+    
+    for (const [key, value] of formData.entries()) {
+        params.append(key, value);
+    }
+    
+    window.location.href = `/compare?${params.toString()}`;
+});
+</script>
+
+<style>
+.athlete-select-card {
+    cursor: pointer;
+}
+
+.athlete-select-card input[type="checkbox"] {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 10;
+}
+
+.athlete-select-card .card {
+    transition: all 0.2s ease;
+    border: 2px solid #dee2e6;
+}
+
+.athlete-select-card input[type="checkbox"]:checked + .card {
+    border-color: #0d6efd;
+    background-color: #e7f3ff;
+}
+
+.athlete-select-card:hover .card {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    transform: translateY(-1px);
+}
+
+.athlete-meta {
+    margin-top: 10px;
+}
+</style>
+{% endblock %}

@@ -1,0 +1,184 @@
+
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <style>
+            body { font-family: Arial, sans-serif; margin: 40px; background-color: #f5f5f5; }
+            .container { max-width: 1400px; margin: 0 auto; background-color: white; padding: 30px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+            h1 { color: #2c3e50; text-align: center; margin-bottom: 10px; }
+            .subtitle { text-align: center; font-size: 18px; color: #34495e; margin-bottom: 30px; font-weight: bold; }
+            h2 { color: #34495e; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
+            
+            .comparison-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin: 30px 0; }
+            .athlete-card { background-color: #f8f9fa; padding: 25px; border-radius: 10px; border-left: 5px solid #3498db; }
+            .athlete-card.finn { border-left-color: #2E86AB; }
+            .athlete-card.dan { border-left-color: #A23B72; }
+            
+            .athlete-name { font-size: 24px; font-weight: bold; margin-bottom: 15px; color: #2c3e50; }
+            .athlete-info { font-size: 14px; color: #7f8c8d; margin-bottom: 20px; }
+            
+            .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+            .stat-item { padding: 12px; background-color: white; border-radius: 5px; border-left: 3px solid #3498db; }
+            .stat-label { font-size: 12px; color: #7f8c8d; margin-bottom: 5px; }
+            .stat-value { font-size: 18px; font-weight: bold; color: #2c3e50; }
+            
+            .comparison-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+            .comparison-table th, .comparison-table td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+            .comparison-table th { background-color: #f8f9fa; font-weight: bold; }
+            .better { background-color: #d4edda; font-weight: bold; }
+            .worse { background-color: #f8d7da; }
+            
+            .plot { text-align: center; margin: 30px 0; }
+            img { max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 5px; }
+            
+            .summary-box { background-color: #e8f4f8; padding: 20px; border-radius: 10px; margin: 30px 0; border-left: 5px solid #3498db; }
+            .footer { text-align: center; color: #7f8c8d; margin-top: 40px; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>🏃‍♂️ Cocodona 250 2025: Head-to-Head Comparison</h1>
+            <p class="subtitle">Finn Melanson vs Dan Green - 256 Mile Ultra-Endurance Analysis</p>
+            
+            <div class="comparison-grid">
+                <div class="athlete-card finn">
+                    <div class="athlete-name">🌟 Finn Melanson</div>
+                    <div class="athlete-info">
+                        Bib #43 • 33 years old • Salt Lake City, UT
+                    </div>
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-label">Total Time</div>
+                            <div class="stat-value">66h 36m</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">Average Pace</div>
+                            <div class="stat-value">15:36/mi</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">Fastest Mile</div>
+                            <div class="stat-value">7:55/mi</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">Sub-15 min/mi</div>
+                            <div class="stat-value">163 miles (63.7%)</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="athlete-card dan">
+                    <div class="athlete-name">⚡ Dan Green</div>
+                    <div class="athlete-info">
+                        Bib #24 • 28 years old • Huntington, WV
+                    </div>
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-label">Total Time</div>
+                            <div class="stat-value">58h 46m</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">Average Pace</div>
+                            <div class="stat-value">13:43/mi</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">Fastest Mile</div>
+                            <div class="stat-value">7:25/mi</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">Sub-15 min/mi</div>
+                            <div class="stat-value">186 miles (72.4%)</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <h2>📊 Detailed Comparison</h2>
+            <table class="comparison-table">
+                <thead>
+                    <tr>
+                        <th>Metric</th>
+                        <th>Finn Melanson</th>
+                        <th>Dan Green</th>
+                        <th>Difference</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Total Time</strong></td>
+                        <td class="worse">66h 36m</td>
+                        <td class="better">58h 46m</td>
+                        <td>7h 50m</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Average Pace</strong></td>
+                        <td class="worse">15:36/mi</td>
+                        <td class="better">13:43/mi</td>
+                        <td>1.9 min/mi</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Fastest Mile</strong></td>
+                        <td class="worse">7:55/mi</td>
+                        <td class="better">7:25/mi</td>
+                        <td>0.5 min/mi</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Sub-10 min/mi</strong></td>
+                        <td class="worse">14 miles (5.5%)</td>
+                        <td class="better">57 miles (22.2%)</td>
+                        <td>43 miles</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Sub-15 min/mi</strong></td>
+                        <td class="worse">163 miles (63.7%)</td>
+                        <td class="better">186 miles (72.4%)</td>
+                        <td>23 miles</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Miles over 20 min/mi</strong></td>
+                        <td class="worse">30 miles</td>
+                        <td class="better">27 miles</td>
+                        <td>3 miles</td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <div class="summary-box">
+                <h3>🏆 Performance Summary</h3>
+                <p><strong>Dan Green</strong> 
+                finished faster overall by 7h 50m.</p>
+                
+                <p><strong>Dan</strong> 
+                maintained a better average pace by 1.9 minutes per mile.</p>
+                
+                <p><strong>Dan</strong> 
+                ran 23 more miles under 15 min/mile pace 
+                (72.4% vs 63.7%).</p>
+            </div>
+    
+            <h2>📈 Visual Comparisons</h2>
+        
+                <div class="plot">
+                    <h3>Pace Over Distance Comparison</h3>
+                    <img src="images/pace_comparison.png" alt="Pace Comparison">
+                    <p>Direct pace comparison throughout the entire 256-mile race, including 10-mile rolling averages.</p>
+                </div>
+            
+                <div class="plot">
+                    <h3>Pace Distribution Comparison</h3>
+                    <img src="images/pace_distribution_comparison.png" alt="Pace Distribution Comparison">
+                    <p>Comparison of pace frequency distributions showing different pacing strategies.</p>
+                </div>
+            
+                <div class="plot">
+                    <h3>50-Mile Segment Analysis</h3>
+                    <img src="images/segment_comparison.png" alt="Segment Comparison">
+                    <p>Detailed breakdown showing how each athlete performed across different segments of the race.</p>
+                </div>
+            
+            <div class="footer">
+                <p>Generated from Strava activity data • Cocodona 250 2025 • 256+ mile ultra-endurance comparison</p>
+            </div>
+        </div>
+    </body>
+    </html>
+    

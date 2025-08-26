@@ -1,0 +1,255 @@
+{% extends "base.html" %}
+
+{% block title %}{{ athlete.name }} - Ultra Smart Analytics{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('landing') }}">Home</a></li>
+                <li class="breadcrumb-item active">{{ athlete.name }}</li>
+            </ol>
+        </nav>
+
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h1><i class="fas fa-user"></i> {{ athlete.name }}</h1>
+                <div class="text-muted">
+                    <i class="fas fa-id-badge"></i> Bib {{ athlete.bib_number }}
+                    {% if athlete.age %}<span class="mx-2">|</span> Age {{ athlete.age }}{% endif %}
+                    {% if athlete.gender %}<span class="mx-2">|</span> {{ athlete.gender }}{% endif %}
+                </div>
+            </div>
+            <div>
+                <a href="{{ url_for('athlete_interactive', athlete_id=request.endpoint.split('/')[-1]) }}" 
+                   class="btn btn-primary me-2">
+                    <i class="fas fa-chart-line"></i> Interactive Charts
+                </a>
+                <a href="{{ url_for('compare') }}?athletes={{ request.endpoint.split('/')[-1] }}" 
+                   class="btn btn-success me-2">
+                    <i class="fas fa-users"></i> Compare with Others
+                </a>
+                <a href="{{ url_for('landing') }}" class="btn btn-outline-primary">
+                    <i class="fas fa-arrow-left"></i> Back to Athletes
+                </a>
+            </div>
+        </div>
+
+        <!-- Athlete Info Card -->
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0"><i class="fas fa-info-circle"></i> Athlete Info</h5>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>Bib Number:</strong> {{ athlete.bib_number }}</p>
+                        <p><strong>Age:</strong> {{ athlete.age }}</p>
+                        <p><strong>Location:</strong> {{ athlete.city }}, {{ athlete.state or (athlete.country if athlete.country != 'USA' else 'USA') }}</p>
+                        <p><strong>Country:</strong> {{ athlete.country }}</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0"><i class="fas fa-chart-bar"></i> Performance Stats</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="stat-item">
+                                    <div class="stat-label">Total Distance</div>
+                                    <div class="stat-value">{{ stats.total_miles }} miles</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-label">Total Time</div>
+                                    <div class="stat-value">{{ stats.total_time_hours | format_time }}</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-label">Average Pace</div>
+                                    <div class="stat-value">{{ stats.average_pace_minutes | format_pace }}/mi</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-label">Median Pace</div>
+                                    <div class="stat-value">{{ stats.median_pace_minutes | format_pace }}/mi</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="stat-item">
+                                    <div class="stat-label">Fastest Mile</div>
+                                    <div class="stat-value">{{ stats.fastest_pace_minutes | format_pace }}/mi</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-label">Slowest Mile</div>
+                                    <div class="stat-value">{{ stats.slowest_pace_minutes | format_pace }}/mi</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-label">Sub-15 min/mi</div>
+                                    <div class="stat-value">{{ stats.sub_15_miles }} miles ({{ "%.1f"|format(stats.sub_15_percent) }}%)</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-label">Over 20 min/mi</div>
+                                    <div class="stat-value">{{ stats.over_20_miles }} miles</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pace Breakdown -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0"><i class="fas fa-clock"></i> Pace Breakdown</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-3 col-6 mb-3">
+                                <div class="pace-stat bg-success text-white">
+                                    <div class="pace-number">{{ stats.sub_10_miles }}</div>
+                                    <div class="pace-label">Sub-10 min/mi</div>
+                                    <div class="pace-percent">{{ "%.1f"|format(stats.sub_10_percent) }}%</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3 col-6 mb-3">
+                                <div class="pace-stat bg-primary text-white">
+                                    <div class="pace-number">{{ stats.sub_12_miles }}</div>
+                                    <div class="pace-label">Sub-12 min/mi</div>
+                                    <div class="pace-percent">{{ "%.1f"|format(stats.sub_12_percent) }}%</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3 col-6 mb-3">
+                                <div class="pace-stat bg-warning text-dark">
+                                    <div class="pace-number">{{ stats.sub_15_miles }}</div>
+                                    <div class="pace-label">Sub-15 min/mi</div>
+                                    <div class="pace-percent">{{ "%.1f"|format(stats.sub_15_percent) }}%</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3 col-6 mb-3">
+                                <div class="pace-stat bg-danger text-white">
+                                    <div class="pace-number">{{ stats.over_15_miles }}</div>
+                                    <div class="pace-label">Over 15 min/mi</div>
+                                    <div class="pace-percent">{{ "%.1f"|format(stats.over_15_percent) }}%</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Section -->
+        <div class="row">
+            <!-- Pace Over Distance Chart -->
+            {% if pace_plot %}
+            <div class="col-12 mb-4">
+                <div class="card">
+                    <div class="card-header bg-dark text-white">
+                        <h5 class="mb-0"><i class="fas fa-chart-line"></i> Pace Over Distance</h5>
+                    </div>
+                    <div class="card-body text-center">
+                        <img src="data:image/png;base64,{{ pace_plot }}" 
+                             class="img-fluid" 
+                             alt="Pace over distance chart">
+                        <p class="text-muted mt-2">
+                            Shows pace variation throughout the entire race with 10-mile rolling average
+                        </p>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Pace Distribution Chart -->
+            {% if distribution_plot %}
+            <div class="col-12 mb-4">
+                <div class="card">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0"><i class="fas fa-chart-bar"></i> Pace Distribution</h5>
+                    </div>
+                    <div class="card-body text-center">
+                        <img src="data:image/png;base64,{{ distribution_plot }}" 
+                             class="img-fluid" 
+                             alt="Pace distribution chart">
+                        <p class="text-muted mt-2">
+                            Histogram showing the frequency of different paces with average and median lines
+                        </p>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- 50-Mile Segment Analysis Chart -->
+            {% if segment_plot %}
+            <div class="col-12 mb-4">
+                <div class="card">
+                    <div class="card-header bg-warning text-dark">
+                        <h5 class="mb-0"><i class="fas fa-chart-area"></i> 50-Mile Segment Analysis</h5>
+                    </div>
+                    <div class="card-body text-center">
+                        <img src="data:image/png;base64,{{ segment_plot }}" 
+                             class="img-fluid" 
+                             alt="50-mile segment analysis chart">
+                        <p class="text-muted mt-2">
+                            <strong>Top:</strong> Average pace by 50-mile segments<br>
+                            <strong>Bottom:</strong> Pace distribution within each segment (box plots)
+                        </p>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<style>
+.stat-item {
+    margin-bottom: 15px;
+}
+
+.stat-label {
+    font-size: 14px;
+    color: #6c757d;
+    margin-bottom: 5px;
+}
+
+.stat-value {
+    font-size: 18px;
+    font-weight: bold;
+    color: #212529;
+}
+
+.pace-stat {
+    padding: 20px;
+    border-radius: 10px;
+    text-align: center;
+    height: 120px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.pace-number {
+    font-size: 28px;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.pace-label {
+    font-size: 14px;
+    margin-bottom: 5px;
+}
+
+.pace-percent {
+    font-size: 12px;
+    opacity: 0.9;
+}
+</style>
+{% endblock %}

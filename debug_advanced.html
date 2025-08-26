@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Advanced Analysis</title>
+</head>
+<body>
+    <h1>Debug Test</h1>
+    <input type="text" id="searchInput" placeholder="Search...">
+    <div id="runnerResults"></div>
+    <div id="debug"></div>
+
+    <script>
+        let allRunners = [];
+
+        function loadRunners() {
+            console.log('Loading runners...');
+            fetch('/api/runners')
+                .then(response => {
+                    console.log('Response status:', response.status);
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Loaded runners:', data.length);
+                    console.log('First runner:', data[0]);
+                    allRunners = data;
+                    displayRunners(data);
+                })
+                .catch(error => {
+                    console.error('Error loading runners:', error);
+                    document.getElementById('debug').innerHTML = 'Error: ' + error;
+                });
+        }
+
+        function displayRunners(runners) {
+            console.log('Displaying runners:', runners.length);
+            const container = document.getElementById('runnerResults');
+            
+            if (runners.length === 0) {
+                container.innerHTML = '<div>No runners found</div>';
+                return;
+            }
+
+            const html = runners.map(runner => `
+                <div style="border: 1px solid #ccc; margin: 5px; padding: 10px;">
+                    <strong>${runner.first_name} ${runner.last_name}</strong> - Bib ${runner.bib_number}
+                </div>
+            `).join('');
+            
+            container.innerHTML = html;
+        }
+
+        function filterRunners() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            console.log('Searching for:', searchTerm);
+            
+            if (!searchTerm) {
+                displayRunners(allRunners);
+                return;
+            }
+
+            const filtered = allRunners.filter(runner => {
+                const matches = (runner.first_name && runner.first_name.toLowerCase().includes(searchTerm)) ||
+                               (runner.last_name && runner.last_name.toLowerCase().includes(searchTerm)) ||
+                               (runner.bib_number && runner.bib_number.toString().includes(searchTerm));
+                console.log(`Testing ${runner.first_name} ${runner.last_name} (${runner.bib_number}):`, matches);
+                return matches;
+            });
+
+            console.log('Filtered results:', filtered.length);
+            displayRunners(filtered);
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            loadRunners();
+            document.getElementById('searchInput').addEventListener('input', filterRunners);
+        });
+    </script>
+</body>
+</html>

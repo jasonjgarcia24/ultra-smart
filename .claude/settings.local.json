@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(sudo apt:*)",
+      "WebSearch",
+      "Bash(python:*)",
+      "Bash(pip install:*)",
+      "Bash(source:*)",
+      "Bash(curl:*)",
+      "Bash(pip3 install:*)",
+      "Bash(grep:*)",
+      "Bash(pkill:*)",
+      "Bash(sed:*)",
+      "Bash(cat:*)",
+      "Bash(sqlite3:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

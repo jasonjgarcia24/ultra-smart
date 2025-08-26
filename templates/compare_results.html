@@ -1,0 +1,348 @@
+{% extends "base.html" %}
+
+{% block title %}Athlete Comparison Results - Ultra Smart Analytics{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('landing') }}">Home</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('compare') }}">Compare</a></li>
+                <li class="breadcrumb-item active">Results</li>
+            </ol>
+        </nav>
+
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1><i class="fas fa-chart-line"></i> Athlete Comparison Results</h1>
+            <div>
+                <a href="{{ url_for('compare_interactive') }}{% if request.args.getlist('athletes') %}?{% for athlete in request.args.getlist('athletes') %}athletes={{ athlete }}{% if not loop.last %}&{% endif %}{% endfor %}{% endif %}" 
+                   class="btn btn-primary me-2">
+                    <i class="fas fa-chart-line"></i> Interactive Charts
+                </a>
+                <a href="{{ url_for('compare') }}" class="btn btn-success me-2">
+                    <i class="fas fa-plus"></i> New Comparison
+                </a>
+                <a href="{{ url_for('landing') }}" class="btn btn-outline-primary">
+                    <i class="fas fa-home"></i> Dashboard
+                </a>
+            </div>
+        </div>
+
+        <!-- Athletes Overview -->
+        <div class="row mb-4">
+            {% for name, athlete in athletes_data.items() %}
+            <div class="col-md-6 col-lg-{{ (12 // athletes_data|length) if athletes_data|length <= 4 else 3 }} mb-3">
+                <div class="card athlete-summary h-100">
+                    <div class="card-header bg-primary text-white">
+                        <h6 class="mb-0">
+                            <i class="fas fa-user"></i> {{ name }}
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="athlete-meta mb-3">
+                            <small class="text-muted">
+                                Bib #{{ athlete.bib_number }} • {{ athlete.age }}y • 
+                                {{ athlete.city }}, {{ athlete.state }}
+                            </small>
+                        </div>
+                        
+                        {% set stats = athletes_stats[name] %}
+                        <div class="stats-grid">
+                            <div class="stat-row">
+                                <span class="stat-label">Total Time:</span>
+                                <span class="stat-value">{{ stats.total_time_hours | format_time }}</span>
+                            </div>
+                            <div class="stat-row">
+                                <span class="stat-label">Avg Pace:</span>
+                                <span class="stat-value">{{ stats.average_pace_minutes | format_pace }}/mi</span>
+                            </div>
+                            <div class="stat-row">
+                                <span class="stat-label">Fastest Mile:</span>
+                                <span class="stat-value">{{ stats.fastest_pace_minutes | format_pace }}/mi</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Comparison Charts -->
+        <div class="row mb-4">
+            <!-- Pace Over Distance Comparison -->
+            {% if comparison_plot %}
+            <div class="col-12 mb-4">
+                <div class="card">
+                    <div class="card-header bg-dark text-white">
+                        <h5 class="mb-0"><i class="fas fa-chart-area"></i> Pace Comparison Over Distance</h5>
+                    </div>
+                    <div class="card-body text-center">
+                        <img src="data:image/png;base64,{{ comparison_plot }}" 
+                             class="img-fluid" 
+                             alt="Athletes pace comparison chart">
+                        <p class="text-muted mt-2">
+                            Direct comparison of pace throughout the race with 10-mile rolling averages
+                        </p>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Pace Distribution Comparison -->
+            {% if distribution_comparison_plot %}
+            <div class="col-12 mb-4">
+                <div class="card">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0"><i class="fas fa-chart-bar"></i> Pace Distribution Comparison</h5>
+                    </div>
+                    <div class="card-body text-center">
+                        <img src="data:image/png;base64,{{ distribution_comparison_plot }}" 
+                             class="img-fluid" 
+                             alt="Pace distribution comparison chart">
+                        <p class="text-muted mt-2">
+                            Comparison of pace frequency distributions showing different pacing strategies
+                            <br><em>Dashed lines show each athlete's average pace</em>
+                        </p>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- 50-Mile Segment Comparison -->
+            {% if segment_comparison_plot %}
+            <div class="col-12 mb-4">
+                <div class="card">
+                    <div class="card-header bg-warning text-dark">
+                        <h5 class="mb-0"><i class="fas fa-chart-column"></i> 50-Mile Segment Analysis Comparison</h5>
+                    </div>
+                    <div class="card-body text-center">
+                        <img src="data:image/png;base64,{{ segment_comparison_plot }}" 
+                             class="img-fluid" 
+                             alt="50-mile segment comparison chart">
+                        <p class="text-muted mt-2">
+                            <strong>Top:</strong> Side-by-side average pace by 50-mile segments<br>
+                            <strong>Bottom:</strong> Pace distribution within each segment for detailed comparison
+                        </p>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Detailed Comparison Table -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0"><i class="fas fa-table"></i> Detailed Performance Comparison</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>Metric</th>
+                                        {% for name in athletes_data.keys() %}
+                                        <th class="text-center">{{ name }}</th>
+                                        {% endfor %}
+                                        <th class="text-center">Best</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td><strong>Total Time</strong></td>
+                                        {% set times = [] %}
+                                        {% for name in athletes_data.keys() %}
+                                            {% set stats = athletes_stats[name] %}
+                                            {% set _ = times.append(stats.total_time_hours) %}
+                                            <td class="text-center {{ 'table-success' if stats.total_time_hours == times | min else '' }}">
+                                                {{ stats.total_time_hours | format_time }}
+                                            </td>
+                                        {% endfor %}
+                                        <td class="text-center table-success">{{ times | min | format_time }}</td>
+                                    </tr>
+                                    
+                                    <tr>
+                                        <td><strong>Average Pace</strong></td>
+                                        {% set paces = [] %}
+                                        {% for name in athletes_data.keys() %}
+                                            {% set stats = athletes_stats[name] %}
+                                            {% set _ = paces.append(stats.average_pace_minutes) %}
+                                            <td class="text-center {{ 'table-success' if stats.average_pace_minutes == paces | min else '' }}">
+                                                {{ stats.average_pace_minutes | format_pace }}/mi
+                                            </td>
+                                        {% endfor %}
+                                        <td class="text-center table-success">{{ paces | min | format_pace }}/mi</td>
+                                    </tr>
+                                    
+                                    <tr>
+                                        <td><strong>Fastest Mile</strong></td>
+                                        {% set fastest = [] %}
+                                        {% for name in athletes_data.keys() %}
+                                            {% set stats = athletes_stats[name] %}
+                                            {% set _ = fastest.append(stats.fastest_pace_minutes) %}
+                                            <td class="text-center {{ 'table-success' if stats.fastest_pace_minutes == fastest | min else '' }}">
+                                                {{ stats.fastest_pace_minutes | format_pace }}/mi
+                                            </td>
+                                        {% endfor %}
+                                        <td class="text-center table-success">{{ fastest | min | format_pace }}/mi</td>
+                                    </tr>
+                                    
+                                    <tr>
+                                        <td><strong>Sub-10 min/mi Miles</strong></td>
+                                        {% set sub10 = [] %}
+                                        {% for name in athletes_data.keys() %}
+                                            {% set stats = athletes_stats[name] %}
+                                            {% set _ = sub10.append(stats.sub_10_miles) %}
+                                            <td class="text-center {{ 'table-success' if stats.sub_10_miles == sub10 | max else '' }}">
+                                                {{ stats.sub_10_miles }} ({{ "%.1f"|format(stats.sub_10_percent) }}%)
+                                            </td>
+                                        {% endfor %}
+                                        <td class="text-center table-success">{{ sub10 | max }} miles</td>
+                                    </tr>
+                                    
+                                    <tr>
+                                        <td><strong>Sub-15 min/mi Miles</strong></td>
+                                        {% set sub15 = [] %}
+                                        {% for name in athletes_data.keys() %}
+                                            {% set stats = athletes_stats[name] %}
+                                            {% set _ = sub15.append(stats.sub_15_miles) %}
+                                            <td class="text-center {{ 'table-success' if stats.sub_15_miles == sub15 | max else '' }}">
+                                                {{ stats.sub_15_miles }} ({{ "%.1f"|format(stats.sub_15_percent) }}%)
+                                            </td>
+                                        {% endfor %}
+                                        <td class="text-center table-success">{{ sub15 | max }} miles</td>
+                                    </tr>
+                                    
+                                    <tr>
+                                        <td><strong>Miles Over 20 min/mi</strong></td>
+                                        {% set over20 = [] %}
+                                        {% for name in athletes_data.keys() %}
+                                            {% set stats = athletes_stats[name] %}
+                                            {% set _ = over20.append(stats.over_20_miles) %}
+                                            <td class="text-center {{ 'table-success' if stats.over_20_miles == over20 | min else '' }}">
+                                                {{ stats.over_20_miles }} miles
+                                            </td>
+                                        {% endfor %}
+                                        <td class="text-center table-success">{{ over20 | min }} miles</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Performance Summary -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0"><i class="fas fa-trophy"></i> Performance Summary</h5>
+                    </div>
+                    <div class="card-body">
+                        {% set all_stats = athletes_stats.values() | list %}
+                        {% set times = all_stats | map(attribute='total_time_hours') | list %}
+                        {% set fastest_total = times | min %}
+                        {% set winner = athletes_data.keys() | list | first %}
+                        {% for name, stats in athletes_stats.items() %}
+                            {% if stats.total_time_hours == fastest_total %}
+                                {% set winner = name %}
+                            {% endif %}
+                        {% endfor %}
+                        
+                        <div class="alert alert-success" role="alert">
+                            <h6><i class="fas fa-crown"></i> Overall Winner: <strong>{{ winner }}</strong></h6>
+                            <p class="mb-0">
+                                Completed the race in {{ fastest_total | format_time }} with an average pace of 
+                                {{ athletes_stats[winner].average_pace_minutes | format_pace }}/mi
+                            </p>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="performance-metric">
+                                    <h6><i class="fas fa-bolt"></i> Speed Demon</h6>
+                                    {% set fastest_mile = all_stats | map(attribute='fastest_pace_minutes') | list | min %}
+                                    {% for name, stats in athletes_stats.items() %}
+                                        {% if stats.fastest_pace_minutes == fastest_mile %}
+                                            <p><strong>{{ name }}</strong> - {{ fastest_mile | format_pace }}/mi</p>
+                                        {% endif %}
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="performance-metric">
+                                    <h6><i class="fas fa-battery-full"></i> Most Consistent</h6>
+                                    {% set sub15_percents = all_stats | map(attribute='sub_15_percent') | list %}
+                                    {% set highest_consistency = sub15_percents | max %}
+                                    {% for name, stats in athletes_stats.items() %}
+                                        {% if stats.sub_15_percent == highest_consistency %}
+                                            <p><strong>{{ name }}</strong> - {{ "%.1f"|format(highest_consistency) }}% sub-15 min/mi</p>
+                                        {% endif %}
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="performance-metric">
+                                    <h6><i class="fas fa-mountain"></i> Best Endurance</h6>
+                                    {% set over20_miles = all_stats | map(attribute='over_20_miles') | list %}
+                                    {% set least_slow = over20_miles | min %}
+                                    {% for name, stats in athletes_stats.items() %}
+                                        {% if stats.over_20_miles == least_slow %}
+                                            <p><strong>{{ name }}</strong> - Only {{ least_slow }} miles over 20 min/mi</p>
+                                        {% endif %}
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.athlete-summary {
+    border-left: 4px solid #0d6efd;
+}
+
+.stats-grid .stat-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    padding: 5px 0;
+    border-bottom: 1px solid #f8f9fa;
+}
+
+.stat-label {
+    font-weight: 500;
+    color: #6c757d;
+}
+
+.stat-value {
+    font-weight: bold;
+    color: #212529;
+}
+
+.performance-metric {
+    padding: 15px;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    margin-bottom: 15px;
+}
+
+.performance-metric h6 {
+    color: #495057;
+    margin-bottom: 10px;
+}
+
+.performance-metric p {
+    margin-bottom: 0;
+    font-size: 14px;
+}
+</style>
+{% endblock %}

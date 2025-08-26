@@ -1,0 +1,230 @@
+{% extends "base.html" %}
+
+{% block title %}{{ athlete.name }} Interactive - Ultra Smart Analytics{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('landing') }}">Home</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('athlete_detail', athlete_id=request.endpoint.split('/')[-2]) }}">{{ athlete.name }}</a></li>
+                <li class="breadcrumb-item active">Interactive</li>
+            </ol>
+        </nav>
+
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h1><i class="fas fa-chart-line"></i> {{ athlete.name }} - Interactive Charts</h1>
+                <div class="text-muted">
+                    <i class="fas fa-id-badge"></i> Bib {{ athlete.bib_number }}
+                    {% if athlete.age %}<span class="mx-2">|</span> Age {{ athlete.age }}{% endif %}
+                    {% if athlete.gender %}<span class="mx-2">|</span> {{ athlete.gender }}{% endif %}
+                </div>
+            </div>
+            <div>
+                <button class="btn btn-primary me-2" data-bs-toggle="modal" data-bs-target="#configModal">
+                    <i class="fas fa-cog"></i> Configure Charts
+                </button>
+                <a href="{{ url_for('athlete_detail', athlete_id=request.endpoint.split('/')[-2]) }}" class="btn btn-outline-secondary me-2">
+                    <i class="fas fa-image"></i> Static View
+                </a>
+                <a href="{{ url_for('landing') }}" class="btn btn-outline-primary">
+                    <i class="fas fa-arrow-left"></i> Back to Athletes
+                </a>
+            </div>
+        </div>
+
+        <!-- Quick Stats Row -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title">Total Time</h5>
+                        <p class="card-text fs-4">{{ stats.total_time_hours | format_time }}</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title">Average Pace</h5>
+                        <p class="card-text fs-4">{{ stats.average_pace_minutes | format_pace }}/mi</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title">Fastest Mile</h5>
+                        <p class="card-text fs-4">{{ stats.fastest_pace_minutes | format_pace }}/mi</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title">Total Distance</h5>
+                        <p class="card-text fs-4">{{ stats.total_miles }} mi</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Interactive Charts -->
+        <div class="row">
+            <!-- Pace Over Distance Chart -->
+            <div class="col-12 mb-4">
+                <div class="card">
+                    <div class="card-header bg-dark text-white">
+                        <h5 class="mb-0"><i class="fas fa-chart-line"></i> Pace Over Distance</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="paceChart" style="height: {{ config.height }}px;"></div>
+                        <p class="text-muted mt-2 text-center">
+                            <i class="fas fa-info-circle"></i> 
+                            Hover over data points for details. Use zoom controls to focus on specific sections.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Pace Distribution Chart -->
+            <div class="col-12 mb-4">
+                <div class="card">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0"><i class="fas fa-chart-bar"></i> Pace Distribution</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="distributionChart" style="height: {{ config.height }}px;"></div>
+                        <p class="text-muted mt-2 text-center">
+                            <i class="fas fa-info-circle"></i> 
+                            Click and drag to zoom into specific pace ranges.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 50-Mile Segment Analysis Chart -->
+            <div class="col-12 mb-4">
+                <div class="card">
+                    <div class="card-header bg-warning text-dark">
+                        <h5 class="mb-0"><i class="fas fa-chart-area"></i> 50-Mile Segment Analysis</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="segmentChart" style="height: 800px;"></div>
+                        <p class="text-muted mt-2 text-center">
+                            <i class="fas fa-info-circle"></i> 
+                            <strong>Top:</strong> Average pace by segments (hover for exact values)<br>
+                            <strong>Bottom:</strong> Pace distribution box plots (click legend to show/hide segments)
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Configuration Modal -->
+<div class="modal fade" id="configModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Chart Configuration</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="configForm">
+                    <div class="mb-3">
+                        <label for="rollingWindow" class="form-label">Rolling Average Window (miles)</label>
+                        <input type="range" class="form-range" min="5" max="50" value="{{ config.rolling_window }}" 
+                               id="rollingWindow" name="rolling_window">
+                        <div class="form-text">Current: <span id="rollingValue">{{ config.rolling_window }}</span> miles</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="bins" class="form-label">Distribution Bins</label>
+                        <input type="range" class="form-range" min="10" max="50" value="{{ config.bins }}" 
+                               id="bins" name="bins">
+                        <div class="form-text">Current: <span id="binsValue">{{ config.bins }}</span> bins</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="height" class="form-label">Chart Height (pixels)</label>
+                        <input type="range" class="form-range" min="300" max="800" value="{{ config.height }}" 
+                               id="height" name="height">
+                        <div class="form-text">Current: <span id="heightValue">{{ config.height }}</span> pixels</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="theme" class="form-label">Chart Theme</label>
+                        <select class="form-select" id="theme" name="theme">
+                            <option value="plotly_white" {{ 'selected' if config.theme == 'plotly_white' else '' }}>White</option>
+                            <option value="plotly_dark" {{ 'selected' if config.theme == 'plotly_dark' else '' }}>Dark</option>
+                            <option value="simple_white" {{ 'selected' if config.theme == 'simple_white' else '' }}>Simple White</option>
+                            <option value="ggplot2" {{ 'selected' if config.theme == 'ggplot2' else '' }}>ggplot2</option>
+                            <option value="seaborn" {{ 'selected' if config.theme == 'seaborn' else '' }}>Seaborn</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="yMax" class="form-label">Max Y-Axis (pace in minutes, leave blank for auto)</label>
+                        <input type="number" class="form-control" id="yMax" name="y_max" 
+                               value="{{ config.y_max or '' }}" min="10" max="60" step="1">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" onclick="updateCharts()">Apply Changes</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js" charset="utf-8"></script>
+
+<script>
+// Initialize charts
+document.addEventListener('DOMContentLoaded', function() {
+    // Parse JSON data
+    const paceData = {{ pace_plot_json | safe }};
+    const distributionData = {{ distribution_plot_json | safe }};
+    const segmentData = {{ segment_plot_json | safe }};
+    
+    // Create charts
+    Plotly.newPlot('paceChart', paceData.data, paceData.layout, {responsive: true});
+    Plotly.newPlot('distributionChart', distributionData.data, distributionData.layout, {responsive: true});
+    Plotly.newPlot('segmentChart', segmentData.data, segmentData.layout, {responsive: true});
+});
+
+// Update range display values
+document.getElementById('rollingWindow').oninput = function() {
+    document.getElementById('rollingValue').textContent = this.value;
+};
+
+document.getElementById('bins').oninput = function() {
+    document.getElementById('binsValue').textContent = this.value;
+};
+
+document.getElementById('height').oninput = function() {
+    document.getElementById('heightValue').textContent = this.value;
+};
+
+// Update charts with new configuration
+function updateCharts() {
+    const form = document.getElementById('configForm');
+    const formData = new FormData(form);
+    const params = new URLSearchParams();
+    
+    for (let [key, value] of formData) {
+        if (value) params.append(key, value);
+    }
+    
+    // Reload page with new parameters
+    window.location.href = window.location.pathname + '?' + params.toString();
+}
+</script>
+{% endblock %}

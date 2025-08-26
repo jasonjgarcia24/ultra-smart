@@ -1,0 +1,436 @@
+{% extends "base.html" %}
+
+{% block title %}Interactive Comparison Results - Ultra Smart Analytics{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('landing') }}">Home</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('compare') }}">Compare</a></li>
+                <li class="breadcrumb-item active">Interactive Results</li>
+            </ol>
+        </nav>
+
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1><i class="fas fa-chart-line"></i> Interactive Athlete Comparison</h1>
+            <div>
+                <button class="btn btn-primary me-2" data-bs-toggle="modal" data-bs-target="#configModal">
+                    <i class="fas fa-cog"></i> Configure Charts
+                </button>
+                <a href="{{ url_for('compare') }}{% if request.args.getlist('athletes') %}?{% for athlete in request.args.getlist('athletes') %}athletes={{ athlete }}{% if not loop.last %}&{% endif %}{% endfor %}{% endif %}" 
+                   class="btn btn-outline-secondary me-2">
+                    <i class="fas fa-image"></i> Static View
+                </a>
+                <a href="{{ url_for('compare') }}" class="btn btn-success me-2">
+                    <i class="fas fa-plus"></i> New Comparison
+                </a>
+                <a href="{{ url_for('landing') }}" class="btn btn-outline-primary">
+                    <i class="fas fa-home"></i> Dashboard
+                </a>
+            </div>
+        </div>
+
+        <!-- Athletes Overview -->
+        <div class="row mb-4">
+            {% for name, athlete in athletes_data.items() %}
+            <div class="col-md-6 col-lg-{{ (12 // athletes_data|length) if athletes_data|length <= 4 else 3 }} mb-3">
+                <div class="card athlete-summary h-100">
+                    <div class="card-header bg-primary text-white">
+                        <h6 class="mb-0">
+                            <i class="fas fa-user"></i> {{ name }}
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        {% set stats = athletes_stats[name] %}
+                        <div class="stats-grid">
+                            <div class="stat-row">
+                                <span class="stat-label">Total Time:</span>
+                                <span class="stat-value">{{ stats.total_time_hours | format_time }}</span>
+                            </div>
+                            <div class="stat-row">
+                                <span class="stat-label">Avg Pace:</span>
+                                <span class="stat-value">{{ stats.average_pace_minutes | format_pace }}/mi</span>
+                            </div>
+                            <div class="stat-row">
+                                <span class="stat-label">Fastest Mile:</span>
+                                <span class="stat-value">{{ stats.fastest_pace_minutes | format_pace }}/mi</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Interactive Comparison Charts -->
+        <div class="row">
+            <!-- Pace Comparison -->
+            <div class="col-12 mb-4">
+                <div class="card">
+                    <div class="card-header bg-dark text-white">
+                        <h5 class="mb-0"><i class="fas fa-chart-area"></i> Pace Comparison Over Distance</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="comparisonChart" style="height: {{ config.height }}px;"></div>
+                        <p class="text-muted mt-2 text-center">
+                            <i class="fas fa-info-circle"></i> 
+                            Hover over lines for details. Click legend items to show/hide athletes. Use zoom controls to focus on sections.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Interactive Distribution Comparison -->
+            <div class="col-12 mb-4">
+                <div class="card">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0"><i class="fas fa-chart-bar"></i> Pace Distribution Comparison</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="distributionChart" style="height: {{ config.height }}px;"></div>
+                        <p class="text-muted mt-2 text-center">
+                            <i class="fas fa-info-circle"></i> 
+                            Compare pace frequency distributions. Dashed vertical lines show average pace for each athlete.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Interactive Segment Comparison -->
+            <div class="col-12 mb-4">
+                <div class="card">
+                    <div class="card-header bg-warning text-dark">
+                        <h5 class="mb-0"><i class="fas fa-chart-column"></i> 50-Mile Segment Analysis Comparison</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="segmentChart" style="height: 900px;"></div>
+                        <p class="text-muted mt-2 text-center">
+                            <i class="fas fa-info-circle"></i> 
+                            <strong>Top:</strong> Side-by-side average pace by segments (click legend to show/hide athletes)<br>
+                            <strong>Bottom:</strong> Detailed pace distribution within each segment for comprehensive comparison
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Detailed Comparison Table -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0"><i class="fas fa-table"></i> Detailed Performance Comparison</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>Metric</th>
+                                        {% for name in athletes_data.keys() %}
+                                        <th class="text-center">{{ name }}</th>
+                                        {% endfor %}
+                                        <th class="text-center">Best</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td><strong>Total Time</strong></td>
+                                        {% set times = [] %}
+                                        {% for name in athletes_data.keys() %}
+                                            {% set stats = athletes_stats[name] %}
+                                            {% set _ = times.append(stats.total_time_hours) %}
+                                            <td class="text-center {{ 'table-success' if stats.total_time_hours == times | min else '' }}">
+                                                {{ stats.total_time_hours | format_time }}
+                                            </td>
+                                        {% endfor %}
+                                        <td class="text-center table-success">{{ times | min | format_time }}</td>
+                                    </tr>
+                                    
+                                    <tr>
+                                        <td><strong>Average Pace</strong></td>
+                                        {% set paces = [] %}
+                                        {% for name in athletes_data.keys() %}
+                                            {% set stats = athletes_stats[name] %}
+                                            {% set _ = paces.append(stats.average_pace_minutes) %}
+                                            <td class="text-center {{ 'table-success' if stats.average_pace_minutes == paces | min else '' }}">
+                                                {{ stats.average_pace_minutes | format_pace }}/mi
+                                            </td>
+                                        {% endfor %}
+                                        <td class="text-center table-success">{{ paces | min | format_pace }}/mi</td>
+                                    </tr>
+                                    
+                                    <tr>
+                                        <td><strong>Fastest Mile</strong></td>
+                                        {% set fastest = [] %}
+                                        {% for name in athletes_data.keys() %}
+                                            {% set stats = athletes_stats[name] %}
+                                            {% set _ = fastest.append(stats.fastest_pace_minutes) %}
+                                            <td class="text-center {{ 'table-success' if stats.fastest_pace_minutes == fastest | min else '' }}">
+                                                {{ stats.fastest_pace_minutes | format_pace }}/mi
+                                            </td>
+                                        {% endfor %}
+                                        <td class="text-center table-success">{{ fastest | min | format_pace }}/mi</td>
+                                    </tr>
+                                    
+                                    <tr>
+                                        <td><strong>Sub-10 min/mi Miles</strong></td>
+                                        {% set sub10 = [] %}
+                                        {% for name in athletes_data.keys() %}
+                                            {% set stats = athletes_stats[name] %}
+                                            {% set _ = sub10.append(stats.sub_10_miles) %}
+                                            <td class="text-center {{ 'table-success' if stats.sub_10_miles == sub10 | max else '' }}">
+                                                {{ stats.sub_10_miles }} ({{ "%.1f"|format(stats.sub_10_percent) }}%)
+                                            </td>
+                                        {% endfor %}
+                                        <td class="text-center table-success">{{ sub10 | max }} miles</td>
+                                    </tr>
+                                    
+                                    <tr>
+                                        <td><strong>Sub-15 min/mi Miles</strong></td>
+                                        {% set sub15 = [] %}
+                                        {% for name in athletes_data.keys() %}
+                                            {% set stats = athletes_stats[name] %}
+                                            {% set _ = sub15.append(stats.sub_15_miles) %}
+                                            <td class="text-center {{ 'table-success' if stats.sub_15_miles == sub15 | max else '' }}">
+                                                {{ stats.sub_15_miles }} ({{ "%.1f"|format(stats.sub_15_percent) }}%)
+                                            </td>
+                                        {% endfor %}
+                                        <td class="text-center table-success">{{ sub15 | max }} miles</td>
+                                    </tr>
+                                    
+                                    <tr>
+                                        <td><strong>Miles Over 20 min/mi</strong></td>
+                                        {% set over20 = [] %}
+                                        {% for name in athletes_data.keys() %}
+                                            {% set stats = athletes_stats[name] %}
+                                            {% set _ = over20.append(stats.over_20_miles) %}
+                                            <td class="text-center {{ 'table-success' if stats.over_20_miles == over20 | min else '' }}">
+                                                {{ stats.over_20_miles }} miles
+                                            </td>
+                                        {% endfor %}
+                                        <td class="text-center table-success">{{ over20 | min }} miles</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Performance Summary (Same as static version) -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0"><i class="fas fa-trophy"></i> Performance Summary</h5>
+                    </div>
+                    <div class="card-body">
+                        {% set all_stats = athletes_stats.values() | list %}
+                        {% set times = all_stats | map(attribute='total_time_hours') | list %}
+                        {% set fastest_total = times | min %}
+                        {% set winner = athletes_data.keys() | list | first %}
+                        {% for name, stats in athletes_stats.items() %}
+                            {% if stats.total_time_hours == fastest_total %}
+                                {% set winner = name %}
+                            {% endif %}
+                        {% endfor %}
+                        
+                        <div class="alert alert-success" role="alert">
+                            <h6><i class="fas fa-crown"></i> Overall Winner: <strong>{{ winner }}</strong></h6>
+                            <p class="mb-0">
+                                Completed the race in {{ fastest_total | format_time }} with an average pace of 
+                                {{ athletes_stats[winner].average_pace_minutes | format_pace }}/mi
+                            </p>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="performance-metric">
+                                    <h6><i class="fas fa-bolt"></i> Speed Demon</h6>
+                                    {% set fastest_mile = all_stats | map(attribute='fastest_pace_minutes') | list | min %}
+                                    {% for name, stats in athletes_stats.items() %}
+                                        {% if stats.fastest_pace_minutes == fastest_mile %}
+                                            <p><strong>{{ name }}</strong> - {{ fastest_mile | format_pace }}/mi</p>
+                                        {% endif %}
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="performance-metric">
+                                    <h6><i class="fas fa-battery-full"></i> Most Consistent</h6>
+                                    {% set sub15_percents = all_stats | map(attribute='sub_15_percent') | list %}
+                                    {% set highest_consistency = sub15_percents | max %}
+                                    {% for name, stats in athletes_stats.items() %}
+                                        {% if stats.sub_15_percent == highest_consistency %}
+                                            <p><strong>{{ name }}</strong> - {{ "%.1f"|format(highest_consistency) }}% sub-15 min/mi</p>
+                                        {% endif %}
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="performance-metric">
+                                    <h6><i class="fas fa-mountain"></i> Best Endurance</h6>
+                                    {% set over20_miles = all_stats | map(attribute='over_20_miles') | list %}
+                                    {% set least_slow = over20_miles | min %}
+                                    {% for name, stats in athletes_stats.items() %}
+                                        {% if stats.over_20_miles == least_slow %}
+                                            <p><strong>{{ name }}</strong> - Only {{ least_slow }} miles over 20 min/mi</p>
+                                        {% endif %}
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Configuration Modal -->
+<div class="modal fade" id="configModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Chart Configuration</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="configForm">
+                    <div class="mb-3">
+                        <label for="rollingWindow" class="form-label">Rolling Average Window (miles)</label>
+                        <input type="range" class="form-range" min="5" max="50" value="{{ config.rolling_window }}" 
+                               id="rollingWindow" name="rolling_window">
+                        <div class="form-text">Current: <span id="rollingValue">{{ config.rolling_window }}</span> miles</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="bins" class="form-label">Distribution Bins</label>
+                        <input type="range" class="form-range" min="10" max="50" value="{{ config.bins }}" 
+                               id="bins" name="bins">
+                        <div class="form-text">Current: <span id="binsValue">{{ config.bins }}</span> bins</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="height" class="form-label">Chart Height (pixels)</label>
+                        <input type="range" class="form-range" min="400" max="1000" value="{{ config.height }}" 
+                               id="height" name="height">
+                        <div class="form-text">Current: <span id="heightValue">{{ config.height }}</span> pixels</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="theme" class="form-label">Chart Theme</label>
+                        <select class="form-select" id="theme" name="theme">
+                            <option value="plotly_white" {{ 'selected' if config.theme == 'plotly_white' else '' }}>White</option>
+                            <option value="plotly_dark" {{ 'selected' if config.theme == 'plotly_dark' else '' }}>Dark</option>
+                            <option value="simple_white" {{ 'selected' if config.theme == 'simple_white' else '' }}>Simple White</option>
+                            <option value="ggplot2" {{ 'selected' if config.theme == 'ggplot2' else '' }}>ggplot2</option>
+                            <option value="seaborn" {{ 'selected' if config.theme == 'seaborn' else '' }}>Seaborn</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" onclick="updateCharts()">Apply Changes</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js" charset="utf-8"></script>
+
+<script>
+// Initialize charts
+document.addEventListener('DOMContentLoaded', function() {
+    // Parse JSON data
+    const comparisonData = {{ comparison_plot_json | safe }};
+    const distributionData = {{ distribution_comparison_plot_json | safe }};
+    const segmentData = {{ segment_comparison_plot_json | safe }};
+    
+    // Create charts
+    Plotly.newPlot('comparisonChart', comparisonData.data, comparisonData.layout, {responsive: true});
+    Plotly.newPlot('distributionChart', distributionData.data, distributionData.layout, {responsive: true});
+    Plotly.newPlot('segmentChart', segmentData.data, segmentData.layout, {responsive: true});
+});
+
+// Update range display values
+document.getElementById('rollingWindow').oninput = function() {
+    document.getElementById('rollingValue').textContent = this.value;
+};
+
+document.getElementById('bins').oninput = function() {
+    document.getElementById('binsValue').textContent = this.value;
+};
+
+document.getElementById('height').oninput = function() {
+    document.getElementById('heightValue').textContent = this.value;
+};
+
+// Update charts with new configuration
+function updateCharts() {
+    const form = document.getElementById('configForm');
+    const formData = new FormData(form);
+    const params = new URLSearchParams(window.location.search);
+    
+    // Update configuration parameters
+    for (let [key, value] of formData) {
+        if (value) {
+            params.set(key, value);
+        } else {
+            params.delete(key);
+        }
+    }
+    
+    // Reload page with new parameters
+    window.location.href = window.location.pathname + '?' + params.toString();
+}
+</script>
+
+<style>
+.athlete-summary {
+    border-left: 4px solid #0d6efd;
+}
+
+.stats-grid .stat-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    padding: 5px 0;
+    border-bottom: 1px solid #f8f9fa;
+}
+
+.stat-label {
+    font-weight: 500;
+    color: #6c757d;
+}
+
+.stat-value {
+    font-weight: bold;
+    color: #212529;
+}
+
+.performance-metric {
+    padding: 15px;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    margin-bottom: 15px;
+}
+
+.performance-metric h6 {
+    color: #495057;
+    margin-bottom: 10px;
+}
+
+.performance-metric p {
+    margin-bottom: 0;
+    font-size: 14px;
+}
+</style>
+{% endblock %}

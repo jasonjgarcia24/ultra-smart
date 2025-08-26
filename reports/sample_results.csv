@@ -1,0 +1,3 @@
+bib_number,name,age,gender,city,state,country,overall_rank,finish_time,status,checkpoint_name,distance_miles,elapsed_time,split_time,rank_at_checkpoint
+123,John Runner,35,M,Phoenix,AZ,,42,,Finished,McDowell Mountain,15.4,02:30:15,,
+123,John Runner,35,M,Phoenix,AZ,,42,,Finished,Tortilla Flat,42.8,07:45:30,,

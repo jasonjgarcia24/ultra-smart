@@ -1,0 +1,369 @@
+/* Ultra Smart Analytics - Custom Styles */
+
+/* CSS Variables for Light/Dark Mode */
+:root {
+    --bg-color: #f8f9fa;
+    --bg-secondary: #ffffff;
+    --text-color: #212529;
+    --text-muted: #6c757d;
+    --border-color: #dee2e6;
+    --card-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    --card-shadow-hover: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    --navbar-bg: #0d6efd;
+    --success-bg: #d1e7dd;
+    --performance-bg: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    --hover-bg: rgba(0, 123, 255, 0.1);
+}
+
+[data-theme="dark"] {
+    --bg-color: #1a1d29;
+    --bg-secondary: #2d3748;
+    --text-color: #e2e8f0;
+    --text-muted: #a0aec0;
+    --border-color: #4a5568;
+    --card-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.3);
+    --card-shadow-hover: 0 0.5rem 1rem rgba(0, 0, 0, 0.4);
+    --navbar-bg: #2d3748;
+    --success-bg: #2f855a;
+    --performance-bg: linear-gradient(135deg, #2d3748 0%, #4a5568 100%);
+    --hover-bg: rgba(66, 153, 225, 0.2);
+}
+
+body {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.navbar-brand {
+    font-weight: bold;
+    font-size: 1.5rem;
+}
+
+.card {
+    border: 1px solid var(--border-color);
+    background-color: var(--bg-secondary);
+    color: var(--text-color);
+    box-shadow: var(--card-shadow);
+    transition: all 0.2s ease;
+}
+
+.card:hover {
+    box-shadow: var(--card-shadow-hover);
+    transform: translateY(-2px);
+}
+
+.athlete-card {
+    height: 100%;
+    border-left: 4px solid #007bff;
+}
+
+.athlete-card .card-header {
+    border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+.stat-item {
+    padding: 15px;
+    background-color: var(--bg-secondary);
+    border-radius: 8px;
+    border-left: 3px solid #007bff;
+    margin-bottom: 15px;
+    box-shadow: var(--card-shadow);
+}
+
+.stat-label {
+    font-size: 12px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    font-weight: 600;
+    margin-bottom: 5px;
+}
+
+.stat-value {
+    font-size: 24px;
+    font-weight: bold;
+    color: var(--text-color);
+}
+
+.pace-stat {
+    text-align: center;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s ease;
+}
+
+.pace-stat:hover {
+    transform: scale(1.05);
+}
+
+.pace-number {
+    font-size: 2.5rem;
+    font-weight: bold;
+    line-height: 1;
+}
+
+.pace-label {
+    font-size: 0.9rem;
+    margin: 8px 0 4px 0;
+    font-weight: 500;
+}
+
+.pace-percent {
+    font-size: 0.8rem;
+    opacity: 0.9;
+}
+
+.breadcrumb {
+    background-color: transparent;
+    padding: 0;
+}
+
+.breadcrumb-item + .breadcrumb-item::before {
+    color: var(--text-muted);
+}
+
+/* Loading spinner */
+.spinner-border {
+    width: 2rem;
+    height: 2rem;
+}
+
+/* Custom badges for comparison */
+.badge {
+    font-size: 0.8em;
+    padding: 8px 12px;
+}
+
+/* Table enhancements */
+.table-striped tbody tr:hover {
+    background-color: var(--hover-bg);
+}
+
+.table-success {
+    background-color: var(--success-bg) !important;
+    font-weight: bold;
+}
+
+/* Quick stats on cards */
+.athlete-info {
+    font-size: 0.9rem;
+    line-height: 1.4;
+}
+
+.athlete-stats {
+    min-height: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Button enhancements */
+.btn {
+    border-radius: 6px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Alert customizations */
+.alert {
+    border: none;
+    border-radius: 8px;
+}
+
+/* Footer */
+footer {
+    margin-top: auto;
+    border-top: 1px solid var(--border-color);
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+    .container {
+        padding-left: 15px;
+        padding-right: 15px;
+    }
+    
+    .stat-value {
+        font-size: 20px;
+    }
+    
+    .pace-number {
+        font-size: 2rem;
+    }
+    
+    .card-body {
+        padding: 15px;
+    }
+}
+
+/* Animation classes */
+.fade-in {
+    animation: fadeIn 0.5s ease-in;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.slide-up {
+    animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+    from { 
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to { 
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Custom checkbox styling for athlete selection */
+.athlete-select-card .form-check-input {
+    width: 1.2em;
+    height: 1.2em;
+    margin-top: 0.25em;
+}
+
+.athlete-select-card .form-check-input:checked {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+}
+
+/* Performance metrics styling */
+.performance-metric {
+    background: var(--performance-bg);
+    border-left: 4px solid #28a745;
+}
+
+.performance-metric h6 {
+    color: var(--text-color);
+    font-weight: 600;
+}
+
+/* Icon spacing */
+.fas, .far {
+    margin-right: 6px;
+}
+
+.btn .fas, .btn .far {
+    margin-right: 4px;
+}
+
+/* Dark Mode Toggle Button */
+.theme-toggle {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 0.375rem 0.75rem;
+    border-radius: 0.375rem;
+    transition: all 0.2s ease;
+}
+
+.theme-toggle:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: white;
+}
+
+/* Dark mode specific adjustments */
+[data-theme="dark"] .navbar-dark {
+    background-color: var(--navbar-bg) !important;
+}
+
+[data-theme="dark"] .feature-card {
+    color: #d1e7dd;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+[data-theme="dark"] .table {
+    --bs-table-bg: var(--bg-secondary);
+    --bs-table-color: var(--text-color);
+    color: var(--text-color);
+}
+
+[data-theme="dark"] .table-dark {
+    --bs-table-bg: #374151;
+    --bs-table-color: var(--text-color);
+}
+
+[data-theme="dark"] .table-striped > tbody > tr:nth-of-type(odd) > td {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+[data-theme="dark"] .modal-content {
+    background-color: var(--bg-secondary);
+    border-color: var(--border-color);
+}
+
+[data-theme="dark"] .form-control {
+    background-color: var(--bg-secondary);
+    border-color: var(--border-color);
+    color: var(--text-color);
+}
+
+[data-theme="dark"] .form-control:focus {
+    background-color: var(--bg-secondary);
+    border-color: #86b7fe;
+    color: var(--text-color);
+}
+
+/* Keep charts light in dark mode */
+[data-theme="dark"] #comparisonChart,
+[data-theme="dark"] #distributionChart,
+[data-theme="dark"] #segmentChart,
+[data-theme="dark"] .plotly-graph-div {
+    background-color: #ffffff !important;
+    border-radius: 8px;
+}
+
+/* Additional dark mode improvements */
+[data-theme="dark"] .alert {
+    background-color: var(--bg-secondary);
+    border-color: var(--border-color);
+    color: var(--text-color);
+}
+
+[data-theme="dark"] .alert-success {
+    background-color: #1e4d35;
+    border-color: #2f855a;
+    color: #a3e1bc;
+}
+
+[data-theme="dark"] .btn-outline-primary {
+    color: #86b7fe;
+    border-color: #86b7fe;
+}
+
+[data-theme="dark"] .btn-outline-primary:hover {
+    background-color: #86b7fe;
+    color: #000;
+}
+
+[data-theme="dark"] .hero-section {
+    background: linear-gradient(135deg, var(--bg-color) 0%, #2d3748 100%);
+}
+
+[data-theme="dark"] .race-card:hover {
+    background-color: var(--hover-bg);
+}
+
+[data-theme="dark"] .btn-primary {
+    background-color: #4299e1;
+    border-color: #4299e1;
+}
+
+[data-theme="dark"] .btn-primary:hover {
+    background-color: #3182ce;
+    border-color: #3182ce;
+}

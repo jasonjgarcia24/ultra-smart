@@ -1,0 +1,1022 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Analysis - Ultra Smart Analytics</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+</head>
+<body>
+    <div class="container-fluid mt-4">
+        <!-- Header -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h1><i class="fas fa-brain"></i> Advanced Course Dynamics Analysis</h1>
+                        <p class="text-muted">Fatigue modeling, rest detection, and performance optimization</p>
+                    </div>
+                    <div>
+                        <a href="{{ url_for('landing') }}" class="btn btn-outline-primary">
+                            <i class="fas fa-home"></i> Dashboard
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Runner Selection -->
+        <div class="row mb-4" id="runnerSelectionSection">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5><i class="fas fa-users"></i> Select Runners for Analysis</h5>
+                        <button id="collapseSelectionBtn" class="btn btn-sm btn-primary" style="display: none;" onclick="toggleRunnerList()">
+                            <i class="fas fa-chevron-down"></i> Show Runner Selection
+                        </button>
+                    </div>
+                    <div class="card-body" id="runnerSelectionBody">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <input type="text" id="searchInput" class="form-control mb-3" 
+                                       placeholder="Search runners by name, city, state, or bib number...">
+                            </div>
+                            <div class="col-md-4">
+                                <button id="runAnalysis" class="btn btn-success btn-lg w-100" disabled>
+                                    <i class="fas fa-play"></i> Run Advanced Analysis
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="row" id="runnerResults">
+                            <!-- Runner cards will be populated here -->
+                        </div>
+                        
+                        <div id="selectedRunners" class="mt-3" style="display: none;">
+                            <h6>Selected for Analysis:</h6>
+                            <div id="selectedRunnersList" class="d-flex flex-wrap gap-2">
+                                <!-- Selected runners will appear here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Analysis Results -->
+        <div id="analysisResults" style="display: none;">
+            <!-- Single Runner Analysis -->
+            <div id="singleRunnerAnalysis" style="display: none;">
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h5><i class="fas fa-user-circle"></i> <span id="analysisRunnerName"></span> - Advanced Performance Analysis</h5>
+                                <button class="btn btn-sm btn-outline-primary" onclick="startNewAnalysis()">
+                                    <i class="fas fa-plus"></i> New Analysis
+                                </button>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <div class="card bg-light">
+                                            <div class="card-body text-center">
+                                                <h6><i class="fas fa-battery-half"></i> Average Fatigue Factor</h6>
+                                                <h4 id="avgFatigue" class="text-warning">-</h4>
+                                                <small class="text-muted">1.0 = Expected pace</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="card bg-light">
+                                            <div class="card-body text-center">
+                                                <h6><i class="fas fa-mountain"></i> Strongest Terrain</h6>
+                                                <h4 id="strongestTerrain" class="text-success">-</h4>
+                                                <small class="text-muted">Best performance type</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="card bg-light">
+                                            <div class="card-body text-center">
+                                                <h6><i class="fas fa-pause-circle"></i> Rest Periods</h6>
+                                                <h4 id="restPeriods" class="text-info">-</h4>
+                                                <small class="text-muted">Detected stops</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Fatigue Progression Chart -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5><i class="fas fa-chart-line"></i> Fatigue Progression Throughout Race</h5>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="fatigueChart" height="100"></canvas>
+                                
+                                <!-- Segment Legend -->
+                                <div class="mt-3">
+                                    <h6 class="mb-2"><i class="fas fa-map"></i> Course Segments:</h6>
+                                    <div class="d-flex flex-wrap gap-2" style="font-size: 0.85rem;">
+                                        <span class="badge" style="background-color: rgba(220, 53, 69, 0.3); color: #721c24;">Phoenix Mountains (0-15.8mi)</span>
+                                        <span class="badge" style="background-color: rgba(255, 193, 7, 0.3); color: #664d03;">Granite to Spur Cross (15.8-24.1mi)</span>
+                                        <span class="badge" style="background-color: rgba(40, 167, 69, 0.3); color: #0a3622;">Spur Cross to Maggie's (24.1-43.1mi)</span>
+                                        <span class="badge" style="background-color: rgba(0, 123, 255, 0.3); color: #052c65;">Maggie's to Javelina (43.1-57.3mi)</span>
+                                        <span class="badge" style="background-color: rgba(108, 117, 125, 0.3); color: #212529;">Javelina to Vulture (57.3-87.2mi)</span>
+                                        <span class="badge" style="background-color: rgba(220, 53, 69, 0.3); color: #721c24;">Vulture to Prescott (87.2-115.2mi)</span>
+                                        <span class="badge" style="background-color: rgba(255, 193, 7, 0.3); color: #664d03;">Prescott to Jerome (115.2-137.4mi)</span>
+                                        <span class="badge" style="background-color: rgba(40, 167, 69, 0.3); color: #0a3622;">Jerome to Sedona (137.4-158.6mi)</span>
+                                        <span class="badge" style="background-color: rgba(0, 123, 255, 0.3); color: #052c65;">Sedona to Mormon Lake (158.6-201.3mi)</span>
+                                        <span class="badge" style="background-color: rgba(108, 117, 125, 0.3); color: #212529;">Mormon Lake to Flagstaff (201.3-238.2mi)</span>
+                                        <span class="badge" style="background-color: rgba(220, 53, 69, 0.3); color: #721c24;">Flagstaff Finish (238.2-250mi)</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Course Impact Analysis -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5><i class="fas fa-route"></i> Course Segment Performance</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-striped" id="segmentTable">
+                                        <thead>
+                                            <tr>
+                                                <th>Segment</th>
+                                                <th>Miles</th>
+                                                <th>Terrain</th>
+                                                <th>Difficulty</th>
+                                                <th>Avg Pace</th>
+                                                <th>Performance Score</th>
+                                                <th>Elevation</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <!-- Segment data will be populated here -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Rest Period Details -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5><i class="fas fa-clock"></i> Detected Rest Periods</h5>
+                            </div>
+                            <div class="card-body">
+                                <div id="restPeriodsList">
+                                    <!-- Rest periods will be populated here -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pacing Recommendations -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5><i class="fas fa-lightbulb"></i> Race Strategy Recommendations</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-8">
+                                        <h6>Overall Strategy</h6>
+                                        <div class="alert alert-info" id="overallStrategy">
+                                            <!-- Strategy will be populated here -->
+                                        </div>
+                                        
+                                        <h6>Segment Recommendations</h6>
+                                        <div class="table-responsive">
+                                            <table class="table table-sm" id="recommendationsTable">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Segment</th>
+                                                        <th>Miles</th>
+                                                        <th>Effort Level</th>
+                                                        <th>Strategy</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <!-- Recommendations will be populated here -->
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <h6>Critical Segments</h6>
+                                        <div id="criticalSegments" class="list-group">
+                                            <!-- Critical segments will be populated here -->
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Multi-Runner Comparison -->
+            <div id="multiRunnerAnalysis" style="display: none;">
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h5><i class="fas fa-users"></i> Multi-Runner Advanced Comparison</h5>
+                                <button class="btn btn-sm btn-outline-primary" onclick="startNewAnalysis()">
+                                    <i class="fas fa-plus"></i> New Analysis
+                                </button>
+                            </div>
+                            <div class="card-body">
+                                <!-- Fatigue comparison chart -->
+                                <div class="mb-4">
+                                    <h6><i class="fas fa-chart-area"></i> Fatigue Progression Comparison</h6>
+                                    <canvas id="multiRunnerFatigueChart" height="100"></canvas>
+                                </div>
+                                
+                                <!-- Performance comparison table -->
+                                <div class="table-responsive">
+                                    <table class="table table-striped" id="multiRunnerTable">
+                                        <thead>
+                                            <tr>
+                                                <th>Runner</th>
+                                                <th>Avg Fatigue</th>
+                                                <th>Peak Fatigue Mile</th>
+                                                <th>Rest Periods</th>
+                                                <th>Best Terrain</th>
+                                                <th>Elevation Tolerance</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <!-- Multi-runner data will be populated here -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading Spinner -->
+        <div id="loadingSpinner" style="display: none;" class="text-center">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Analyzing...</span>
+            </div>
+            <p class="mt-2">Running advanced analysis...</p>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let allRunners = [];
+        let selectedRunners = [];
+        let currentAnalysisData = {};
+
+        // Load runners on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadRunners();
+            setupEventListeners();
+        });
+
+        function setupEventListeners() {
+            document.getElementById('searchInput').addEventListener('input', filterRunners);
+            document.getElementById('runAnalysis').addEventListener('click', runAdvancedAnalysis);
+        }
+
+        function loadRunners() {
+            fetch('/api/runners')
+                .then(response => response.json())
+                .then(data => {
+                    allRunners = data;
+                    displayRunners(data);
+                })
+                .catch(error => {
+                    console.error('Error loading runners:', error);
+                });
+        }
+
+        function displayRunners(runners) {
+            const container = document.getElementById('runnerResults');
+            
+            if (runners.length === 0) {
+                container.innerHTML = '<div class="col-12 text-center text-muted">No runners found</div>';
+                return;
+            }
+
+            const cardsHtml = runners.map(runner => `
+                <div class="col-md-4 col-lg-3 mb-3">
+                    <div class="card runner-card h-100" data-runner-id="${runner.id}" 
+                         onclick="selectRunner(${runner.id})">
+                        <div class="card-body p-3">
+                            <div class="d-flex justify-content-between mb-2">
+                                <strong>${runner.first_name} ${runner.last_name}</strong>
+                                <span class="badge bg-secondary">${runner.place || 'N/A'}</span>
+                            </div>
+                            <div class="small text-muted">
+                                <div><i class="fas fa-id-badge"></i> Bib ${runner.bib_number || 'N/A'}</div>
+                                <div><i class="fas fa-clock"></i> ${runner.finish_time || 'DNF'}</div>
+                            </div>
+                            <div class="small text-muted mt-1">
+                                ${runner.city ? runner.city : ''}${runner.city && (runner.state || runner.country) ? ', ' : ''}${runner.state || (runner.country === 'USA' ? 'USA' : runner.country || '')}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+            
+            container.innerHTML = cardsHtml;
+        }
+
+        function filterRunners() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            
+            if (!searchTerm) {
+                displayRunners(allRunners);
+                return;
+            }
+
+            const filtered = allRunners.filter(runner => {
+                const matchesSearch = !searchTerm || 
+                    (runner.first_name && runner.first_name.toLowerCase().includes(searchTerm)) ||
+                    (runner.last_name && runner.last_name.toLowerCase().includes(searchTerm)) ||
+                    (runner.city && runner.city.toLowerCase().includes(searchTerm)) ||
+                    (runner.state && runner.state.toLowerCase().includes(searchTerm)) ||
+                    (runner.country && runner.country.toLowerCase().includes(searchTerm)) ||
+                    (runner.bib_number && runner.bib_number.toString().includes(searchTerm)) ||
+                    (`${runner.first_name} ${runner.last_name}`.toLowerCase().includes(searchTerm)) ||
+                    (`${runner.city}, ${runner.state || (runner.country === 'USA' ? 'USA' : runner.country)}`.toLowerCase().includes(searchTerm));
+                    
+                return matchesSearch;
+            });
+
+            displayRunners(filtered);
+        }
+
+        function selectRunner(runnerId) {
+            const card = document.querySelector(`[data-runner-id="${runnerId}"]`);
+            const runner = allRunners.find(r => r.id === runnerId);
+            
+            if (selectedRunners.includes(runnerId)) {
+                // Remove from selection
+                selectedRunners = selectedRunners.filter(id => id !== runnerId);
+                card.classList.remove('selected');
+            } else {
+                // Add to selection (limit to 5)
+                if (selectedRunners.length < 5) {
+                    selectedRunners.push(runnerId);
+                    card.classList.add('selected');
+                } else {
+                    alert('Maximum 5 runners can be selected for comparison');
+                    return;
+                }
+            }
+            
+            updateSelectedRunnersDisplay();
+            updateAnalysisButton();
+        }
+
+        function updateSelectedRunnersDisplay() {
+            const container = document.getElementById('selectedRunnersList');
+            const selectedDiv = document.getElementById('selectedRunners');
+            
+            if (selectedRunners.length === 0) {
+                selectedDiv.style.display = 'none';
+                return;
+            }
+            
+            selectedDiv.style.display = 'block';
+            
+            const html = selectedRunners.map(runnerId => {
+                const runner = allRunners.find(r => r.id === runnerId);
+                return `
+                    <span class="badge bg-primary p-2">
+                        ${runner.first_name} ${runner.last_name}
+                        <button type="button" class="btn-close btn-close-white ms-1" 
+                                onclick="selectRunner(${runnerId})" aria-label="Remove"></button>
+                    </span>
+                `;
+            }).join('');
+            
+            container.innerHTML = html;
+        }
+
+        function updateAnalysisButton() {
+            const button = document.getElementById('runAnalysis');
+            button.disabled = selectedRunners.length === 0;
+            
+            if (selectedRunners.length === 1) {
+                button.innerHTML = '<i class="fas fa-play"></i> Run Single Runner Analysis';
+            } else if (selectedRunners.length > 1) {
+                button.innerHTML = `<i class="fas fa-play"></i> Compare ${selectedRunners.length} Runners`;
+            }
+        }
+
+        function runAdvancedAnalysis() {
+            if (selectedRunners.length === 0) return;
+            
+            // Collapse runner selection section
+            collapseRunnerSelection();
+            
+            // Show loading
+            document.getElementById('loadingSpinner').style.display = 'block';
+            document.getElementById('analysisResults').style.display = 'none';
+            
+            // Make API call
+            fetch('/api/advanced-analysis', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    runner_ids: selectedRunners
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Analysis response:', data);
+                if (data.status === 'success') {
+                    currentAnalysisData = data;
+                    try {
+                        displayAnalysisResults(data);
+                    } catch (displayError) {
+                        console.error('Error displaying results:', displayError);
+                        // Only show alert if results aren't displayed
+                        if (document.getElementById('analysisResults').style.display !== 'block') {
+                            alert('Error displaying analysis results. Please try again.');
+                        }
+                    }
+                } else {
+                    throw new Error(data.error || 'Analysis failed');
+                }
+            })
+            .catch(error => {
+                console.error('Error running analysis:', error);
+                // Only show alert if it's a network/API error, not a display error
+                if (error.message.includes('HTTP error') || error.message.includes('Analysis failed')) {
+                    alert('Error running analysis. Please try again.');
+                }
+            })
+            .finally(() => {
+                document.getElementById('loadingSpinner').style.display = 'none';
+            });
+        }
+
+        function displayAnalysisResults(data) {
+            document.getElementById('analysisResults').style.display = 'block';
+            
+            if (selectedRunners.length === 1) {
+                displaySingleRunnerAnalysis(data);
+            } else {
+                displayMultiRunnerAnalysis(data);
+            }
+        }
+
+        function displaySingleRunnerAnalysis(data) {
+            const singleDiv = document.getElementById('singleRunnerAnalysis');
+            const multiDiv = document.getElementById('multiRunnerAnalysis');
+            
+            singleDiv.style.display = 'block';
+            multiDiv.style.display = 'none';
+            
+            const runner = allRunners.find(r => r.id === selectedRunners[0]);
+            const analysis = data.analyses[selectedRunners[0]];
+            
+            if (!runner || !analysis) {
+                console.error('Missing runner or analysis data:', { runner, analysis });
+                throw new Error('Missing analysis data');
+            }
+            
+            if (analysis.error) {
+                throw new Error(`Analysis failed: ${analysis.error}`);
+            }
+            
+            // Update header
+            document.getElementById('analysisRunnerName').textContent = `${runner.first_name} ${runner.last_name}`;
+            
+            // Update summary stats
+            document.getElementById('avgFatigue').textContent = analysis.fatigue_analysis?.average_fatigue?.toFixed(2) || 'N/A';
+            document.getElementById('strongestTerrain').textContent = analysis.course_analysis?.strongest_terrain || 'N/A';
+            document.getElementById('restPeriods').textContent = analysis.rest_periods?.length || 0;
+            
+            // Create fatigue chart
+            createFatigueChart(analysis.fatigue_analysis);
+            
+            // Update tables
+            updateSegmentTable(analysis.course_analysis.segment_analysis);
+            updateRestPeriodsList(analysis.rest_periods);
+            updateRecommendations(analysis.recommendations);
+        }
+
+        function displayMultiRunnerAnalysis(data) {
+            const singleDiv = document.getElementById('singleRunnerAnalysis');
+            const multiDiv = document.getElementById('multiRunnerAnalysis');
+            
+            singleDiv.style.display = 'none';
+            multiDiv.style.display = 'block';
+            
+            // Create multi-runner fatigue chart
+            createMultiRunnerFatigueChart(data.analyses);
+            
+            // Update comparison table
+            updateMultiRunnerTable(data.analyses);
+        }
+
+        function createFatigueChart(fatigueData) {
+            if (!fatigueData || !fatigueData.fatigue_progression) {
+                console.error('Invalid fatigue data for chart:', fatigueData);
+                return;
+            }
+            
+            const ctx = document.getElementById('fatigueChart').getContext('2d');
+            const progression = fatigueData.fatigue_progression;
+            
+            // Get course segments for background shading
+            const segments = [
+                {name: "Phoenix Mountains", start: 0, end: 15.8, color: 'rgba(220, 53, 69, 0.1)'}, // Red
+                {name: "Granite to Spur Cross", start: 15.8, end: 24.1, color: 'rgba(255, 193, 7, 0.1)'}, // Yellow
+                {name: "Spur Cross to Maggie's", start: 24.1, end: 43.1, color: 'rgba(40, 167, 69, 0.1)'}, // Green
+                {name: "Maggie's to Javelina", start: 43.1, end: 57.3, color: 'rgba(0, 123, 255, 0.1)'}, // Blue
+                {name: "Javelina to Vulture", start: 57.3, end: 87.2, color: 'rgba(108, 117, 125, 0.1)'}, // Gray
+                {name: "Vulture to Prescott", start: 87.2, end: 115.2, color: 'rgba(220, 53, 69, 0.1)'}, // Red
+                {name: "Prescott to Jerome", start: 115.2, end: 137.4, color: 'rgba(255, 193, 7, 0.1)'}, // Yellow
+                {name: "Jerome to Sedona", start: 137.4, end: 158.6, color: 'rgba(40, 167, 69, 0.1)'}, // Green
+                {name: "Sedona to Mormon Lake", start: 158.6, end: 201.3, color: 'rgba(0, 123, 255, 0.1)'}, // Blue
+                {name: "Mormon Lake to Flagstaff", start: 201.3, end: 238.2, color: 'rgba(108, 117, 125, 0.1)'}, // Gray
+                {name: "Flagstaff Finish", start: 238.2, end: 250, color: 'rgba(220, 53, 69, 0.1)'} // Red
+            ];
+
+            // Define custom plugin for segment backgrounds
+            const segmentBackgroundPlugin = {
+                id: 'segmentBackground',
+                beforeDraw: (chart) => {
+                    const ctx = chart.ctx;
+                    const chartArea = chart.chartArea;
+                    const xScale = chart.scales.x;
+                    
+                    if (!xScale || !chartArea) return;
+                    
+                    segments.forEach(segment => {
+                        const startX = xScale.getPixelForValue(segment.start);
+                        const endX = xScale.getPixelForValue(segment.end);
+                        
+                        if (startX >= chartArea.left && endX <= chartArea.right) {
+                            ctx.save();
+                            ctx.fillStyle = segment.color;
+                            ctx.fillRect(startX, chartArea.top, endX - startX, chartArea.bottom - chartArea.top);
+                            ctx.restore();
+                        }
+                    });
+                }
+            };
+
+            new Chart(ctx, {
+                type: 'line',
+                plugins: [segmentBackgroundPlugin],
+                data: {
+                    labels: progression.map(p => p.mile),
+                    datasets: [{
+                        label: 'Fatigue Factor',
+                        data: progression.map(p => p.fatigue_factor),
+                        borderColor: 'rgb(255, 193, 7)',
+                        backgroundColor: 'rgba(255, 193, 7, 0.1)',
+                        tension: 0.1,
+                        pointRadius: 2,
+                        pointHoverRadius: 4
+                    }, {
+                        label: 'Terrain Difficulty',
+                        data: progression.map(p => p.terrain_difficulty / 5), // Normalize to 0-1
+                        borderColor: 'rgb(108, 117, 125)',
+                        backgroundColor: 'rgba(108, 117, 125, 0.1)',
+                        tension: 0.1,
+                        yAxisID: 'y1',
+                        pointRadius: 1,
+                        pointHoverRadius: 3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        tooltip: {
+                            callbacks: {
+                                afterLabel: function(context) {
+                                    const mile = context.parsed.x;
+                                    const segment = segments.find(s => mile >= s.start && mile < s.end);
+                                    return segment ? `Segment: ${segment.name}` : '';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            display: true,
+                            title: {
+                                display: true,
+                                text: 'Mile'
+                            },
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.1)'
+                            }
+                        },
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            title: {
+                                display: true,
+                                text: 'Fatigue Factor'
+                            },
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.1)'
+                            }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            title: {
+                                display: true,
+                                text: 'Terrain Difficulty (normalized)'
+                            },
+                            grid: {
+                                drawOnChartArea: false,
+                            },
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateSegmentTable(segmentData) {
+            if (!segmentData || !Array.isArray(segmentData)) {
+                console.error('Invalid segment data:', segmentData);
+                return;
+            }
+            
+            const tbody = document.querySelector('#segmentTable tbody');
+            
+            const html = segmentData.map(segment => `
+                <tr>
+                    <td>${segment.segment_name}</td>
+                    <td>${segment.start_mile.toFixed(1)} - ${segment.end_mile.toFixed(1)}</td>
+                    <td><span class="badge bg-secondary">${segment.terrain_type}</span></td>
+                    <td>${'★'.repeat(segment.difficulty_rating)}</td>
+                    <td>${segment.average_pace.toFixed(1)} min/mi</td>
+                    <td>
+                        <div class="progress" style="height: 20px;">
+                            <div class="progress-bar ${segment.performance_score > 0.8 ? 'bg-success' : segment.performance_score > 0.6 ? 'bg-warning' : 'bg-danger'}" 
+                                 style="width: ${Math.min(segment.performance_score * 100, 100)}%">
+                                ${(segment.performance_score * 100).toFixed(0)}%
+                            </div>
+                        </div>
+                    </td>
+                    <td>${segment.elevation_gain > 0 ? '+' + segment.elevation_gain + 'ft' : 'Flat'}</td>
+                </tr>
+            `).join('');
+            
+            tbody.innerHTML = html;
+        }
+
+        function updateRestPeriodsList(restPeriods) {
+            const container = document.getElementById('restPeriodsList');
+            
+            if (restPeriods.length === 0) {
+                container.innerHTML = '<p class="text-muted">No significant rest periods detected.</p>';
+                return;
+            }
+            
+            const html = restPeriods.map(rest => `
+                <div class="alert alert-info">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <strong>Mile ${rest.mile}</strong>
+                            ${rest.nearby_aid_station ? ` - Near ${rest.nearby_aid_station}` : ''}
+                        </div>
+                        <div class="text-end">
+                            <small>${rest.estimated_rest_minutes.toFixed(1)} min slower than expected</small>
+                        </div>
+                    </div>
+                    <small class="text-muted">${rest.likely_reason}</small>
+                </div>
+            `).join('');
+            
+            container.innerHTML = html;
+        }
+
+        function updateRecommendations(recommendations) {
+            // Overall strategy
+            document.getElementById('overallStrategy').textContent = recommendations.overall_strategy;
+            
+            // Segment recommendations
+            const tbody = document.querySelector('#recommendationsTable tbody');
+            const html = recommendations.segment_recommendations.map(rec => `
+                <tr>
+                    <td>${rec.segment}</td>
+                    <td>${rec.miles}</td>
+                    <td>
+                        <div class="progress" style="height: 20px;">
+                            <div class="progress-bar ${rec.recommended_effort > 0.8 ? 'bg-danger' : rec.recommended_effort > 0.7 ? 'bg-warning' : 'bg-success'}" 
+                                 style="width: ${rec.recommended_effort * 100}%">
+                                ${Math.round(rec.recommended_effort * 100)}%
+                            </div>
+                        </div>
+                    </td>
+                    <td>${rec.key_strategy}</td>
+                </tr>
+            `).join('');
+            tbody.innerHTML = html;
+            
+            // Critical segments
+            const criticalContainer = document.getElementById('criticalSegments');
+            const criticalHtml = recommendations.critical_segments.map(segment => `
+                <div class="list-group-item list-group-item-warning">
+                    <i class="fas fa-exclamation-triangle"></i> ${segment}
+                </div>
+            `).join('');
+            criticalContainer.innerHTML = criticalHtml || '<div class="list-group-item">No critical segments identified</div>';
+        }
+
+        function createMultiRunnerFatigueChart(analyses) {
+            const ctx = document.getElementById('multiRunnerFatigueChart').getContext('2d');
+            
+            // Course segments for background shading (same as single runner chart)
+            const segments = [
+                {name: "Phoenix Mountains", start: 0, end: 15.8, color: 'rgba(220, 53, 69, 0.08)'}, // Red (lighter for multi-runner)
+                {name: "Granite to Spur Cross", start: 15.8, end: 24.1, color: 'rgba(255, 193, 7, 0.08)'}, // Yellow
+                {name: "Spur Cross to Maggie's", start: 24.1, end: 43.1, color: 'rgba(40, 167, 69, 0.08)'}, // Green
+                {name: "Maggie's to Javelina", start: 43.1, end: 57.3, color: 'rgba(0, 123, 255, 0.08)'}, // Blue
+                {name: "Javelina to Vulture", start: 57.3, end: 87.2, color: 'rgba(108, 117, 125, 0.08)'}, // Gray
+                {name: "Vulture to Prescott", start: 87.2, end: 115.2, color: 'rgba(220, 53, 69, 0.08)'}, // Red
+                {name: "Prescott to Jerome", start: 115.2, end: 137.4, color: 'rgba(255, 193, 7, 0.08)'}, // Yellow
+                {name: "Jerome to Sedona", start: 137.4, end: 158.6, color: 'rgba(40, 167, 69, 0.08)'}, // Green
+                {name: "Sedona to Mormon Lake", start: 158.6, end: 201.3, color: 'rgba(0, 123, 255, 0.08)'}, // Blue
+                {name: "Mormon Lake to Flagstaff", start: 201.3, end: 238.2, color: 'rgba(108, 117, 125, 0.08)'}, // Gray
+                {name: "Flagstaff Finish", start: 238.2, end: 250, color: 'rgba(220, 53, 69, 0.08)'} // Red
+            ];
+
+            const datasets = selectedRunners.map((runnerId, index) => {
+                const runner = allRunners.find(r => r.id === runnerId);
+                const analysis = analyses[runnerId];
+                const colors = ['#ff6384', '#36a2eb', '#ffce56', '#4bc0c0', '#9966ff'];
+                
+                return {
+                    label: `${runner.first_name} ${runner.last_name}`,
+                    data: analysis.fatigue_analysis.fatigue_progression.map(p => ({x: p.mile, y: p.fatigue_factor})),
+                    borderColor: colors[index % colors.length],
+                    backgroundColor: colors[index % colors.length] + '20',
+                    tension: 0.1,
+                    fill: false,
+                    pointRadius: 2,
+                    pointHoverRadius: 5,
+                    borderWidth: 2
+                };
+            });
+
+            // Define custom plugin for segment backgrounds
+            const multiRunnerSegmentPlugin = {
+                id: 'multiRunnerSegmentBackground',
+                beforeDraw: (chart) => {
+                    const ctx = chart.ctx;
+                    const chartArea = chart.chartArea;
+                    const xScale = chart.scales.x;
+                    
+                    if (!xScale || !chartArea) return;
+                    
+                    segments.forEach(segment => {
+                        const startX = xScale.getPixelForValue(segment.start);
+                        const endX = xScale.getPixelForValue(segment.end);
+                        
+                        if (startX < chartArea.right && endX > chartArea.left) {
+                            ctx.save();
+                            ctx.fillStyle = segment.color;
+                            ctx.fillRect(Math.max(startX, chartArea.left), chartArea.top, 
+                                       Math.min(endX, chartArea.right) - Math.max(startX, chartArea.left), 
+                                       chartArea.bottom - chartArea.top);
+                            ctx.restore();
+                        }
+                    });
+                }
+            };
+            
+            new Chart(ctx, {
+                type: 'line',
+                plugins: [multiRunnerSegmentPlugin],
+                data: { datasets },
+                options: {
+                    responsive: true,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false,
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            onClick: function(e, legendItem, legend) {
+                                const index = legendItem.datasetIndex;
+                                const chart = legend.chart;
+                                const meta = chart.getDatasetMeta(index);
+
+                                // Toggle dataset visibility
+                                meta.hidden = meta.hidden === null ? !chart.data.datasets[index].hidden : null;
+                                chart.update();
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                title: function(context) {
+                                    return `Mile ${context[0].parsed.x}`;
+                                },
+                                afterLabel: function(context) {
+                                    const mile = context.parsed.x;
+                                    const segment = segments.find(s => mile >= s.start && mile < s.end);
+                                    return segment ? `Segment: ${segment.name}` : '';
+                                },
+                                footer: function(context) {
+                                    // Show relative performance
+                                    const values = context.map(c => c.parsed.y);
+                                    const min = Math.min(...values);
+                                    const max = Math.max(...values);
+                                    if (max > min) {
+                                        return `Range: ${min.toFixed(2)} - ${max.toFixed(2)} (${((max-min)/min*100).toFixed(1)}% diff)`;
+                                    }
+                                    return '';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            type: 'linear',
+                            display: true,
+                            title: {
+                                display: true,
+                                text: 'Mile'
+                            },
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.1)'
+                            }
+                        },
+                        y: {
+                            display: true,
+                            title: {
+                                display: true,
+                                text: 'Fatigue Factor'
+                            },
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.1)'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateMultiRunnerTable(analyses) {
+            const tbody = document.querySelector('#multiRunnerTable tbody');
+            
+            const html = selectedRunners.map(runnerId => {
+                const runner = allRunners.find(r => r.id === runnerId);
+                const analysis = analyses[runnerId];
+                
+                return `
+                    <tr>
+                        <td><strong>${runner.first_name} ${runner.last_name}</strong></td>
+                        <td>${analysis.fatigue_analysis.average_fatigue.toFixed(2)}</td>
+                        <td>${analysis.fatigue_analysis.peak_fatigue_mile}</td>
+                        <td>${analysis.rest_periods.length}</td>
+                        <td><span class="badge bg-success">${analysis.course_analysis.strongest_terrain}</span></td>
+                        <td>${analysis.course_analysis.elevation_tolerance}</td>
+                    </tr>
+                `;
+            }).join('');
+            
+            tbody.innerHTML = html;
+        }
+
+        function collapseRunnerSelection() {
+            const selectionBody = document.getElementById('runnerSelectionBody');
+            const collapseBtn = document.getElementById('collapseSelectionBtn');
+            
+            // Add transition effect
+            selectionBody.style.transition = 'all 0.3s ease';
+            selectionBody.style.opacity = '0';
+            
+            setTimeout(() => {
+                selectionBody.style.display = 'none';
+                collapseBtn.style.display = 'inline-block';
+                collapseBtn.innerHTML = '<i class="fas fa-chevron-down"></i> Show Runner Selection';
+            }, 300);
+        }
+
+        function toggleRunnerList() {
+            const selectionBody = document.getElementById('runnerSelectionBody');
+            const collapseBtn = document.getElementById('collapseSelectionBtn');
+            
+            if (selectionBody.style.display === 'none' || window.getComputedStyle(selectionBody).display === 'none') {
+                // Show selection
+                selectionBody.style.display = 'block';
+                selectionBody.style.opacity = '0';
+                setTimeout(() => {
+                    selectionBody.style.opacity = '1';
+                }, 10);
+                collapseBtn.innerHTML = '<i class="fas fa-chevron-up"></i> Hide Runner Selection';
+            } else {
+                // Hide selection
+                selectionBody.style.opacity = '0';
+                setTimeout(() => {
+                    selectionBody.style.display = 'none';
+                }, 300);
+                collapseBtn.innerHTML = '<i class="fas fa-chevron-down"></i> Show Runner Selection';
+            }
+        }
+
+        function startNewAnalysis() {
+            // Clear current selections and results
+            selectedRunners = [];
+            currentAnalysisData = {};
+            
+            // Hide analysis results
+            document.getElementById('analysisResults').style.display = 'none';
+            document.getElementById('loadingSpinner').style.display = 'none';
+            
+            // Show and expand runner selection
+            const selectionBody = document.getElementById('runnerSelectionBody');
+            const collapseBtn = document.getElementById('collapseSelectionBtn');
+            
+            selectionBody.style.display = 'block';
+            selectionBody.style.opacity = '1';
+            collapseBtn.style.display = 'none';
+            
+            // Clear search and update displays
+            document.getElementById('searchInput').value = '';
+            updateSelectedRunnersDisplay();
+            updateAnalysisButton();
+            displayRunners(allRunners);
+            
+            // Clear all selected cards
+            document.querySelectorAll('.runner-card.selected').forEach(card => {
+                card.classList.remove('selected');
+            });
+        }
+    </script>
+
+    <style>
+        .runner-card {
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 2px solid transparent;
+        }
+        
+        .runner-card:hover {
+            border-color: #007bff;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        
+        .runner-card.selected {
+            border-color: #28a745;
+            background-color: #f8f9fa;
+        }
+        
+        .progress {
+            font-size: 0.75rem;
+        }
+        
+        .alert {
+            margin-bottom: 0.5rem;
+        }
+    </style>
+</body>
+</html>

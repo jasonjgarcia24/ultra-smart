@@ -1,0 +1,67 @@
+
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <style>
+            .subtitle { text-align: center; font-size: 18px; color: #34495e; margin-bottom: 20px; font-weight: bold; }
+            body { font-family: Arial, sans-serif; margin: 40px; background-color: #f5f5f5; }
+            .container { max-width: 1200px; margin: 0 auto; background-color: white; padding: 30px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+            h1 { color: #2c3e50; text-align: center; }
+            h2 { color: #34495e; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
+            .plot { text-align: center; margin: 30px 0; }
+            img { max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 5px; }
+            .stats { background-color: #f8f9fa; padding: 20px; border-radius: 5px; margin: 20px 0; }
+            .footer { text-align: center; color: #7f8c8d; margin-top: 40px; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>🏃‍♂️ Ultra-Endurance Run Analysis</h1>
+            <p class=subtitle>2025 Cocodona 250 Strava Activity Analysis - Dan Green (24)</p>
+            <p class=subtitle>256.79 Miles Total<p>
+            
+            <div class="stats">
+                <h2>📊 Quick Stats</h2>
+                <ul>
+                    <li><strong>Total Distance:</strong> 256.79 miles</li>
+                    <li><strong>Start Time:</strong> 05:00 AM 05-May-2025</li>
+                    <li><strong>End Time:</strong> 03:46 PM 07-May-2025</li>
+                    <li><strong>Total Time:</strong> 58h 46m </li>
+                    <li><strong>Total Splits:</strong> 257 miles</li>
+                    <li><strong>Average Pace:</strong> 13:43 min/mile</li>
+                    <li><strong>Fastest Mile:</strong> 7:25 (Mile 36)</li>
+                    <li><strong>Sub-10 min/mile:</strong> 57 miles (22.2%)</li>
+                </ul>
+            </div>
+    
+            <h2>📈 Pace Over Distance</h2>
+            <div class="plot">
+                <img src="pace_over_distance.png" alt="Pace Over Distance">
+                <p>Shows how your pace varied throughout the entire 256+ mile journey.</p>
+            </div>
+        
+            <h2>📊 Pace Distribution</h2>
+            <div class="plot">
+                <img src="pace_distribution.png" alt="Pace Distribution">
+                <p>Histogram showing the frequency of different paces throughout the activity.</p>
+            </div>
+        
+            <h2>📉 Rolling Average Trend</h2>
+            <div class="plot">
+                <img src="pace_rolling_average.png" alt="Rolling Average">
+                <p>10-mile rolling average to show overall pacing trends and strategy.</p>
+            </div>
+        
+            <h2>🔥 Pace Heatmap by Segments</h2>
+            <div class="plot">
+                <img src="pace_heatmap.png" alt="Pace Heatmap">
+                <p>Heatmap showing pace patterns across 25-mile segments of the run.</p>
+            </div>
+        
+            <div class="footer">
+                <p>Generated from Strava activity data • 256.79 mile ultra-endurance analysis</p>
+            </div>
+        </div>
+    </body>
+    </html>
+    
