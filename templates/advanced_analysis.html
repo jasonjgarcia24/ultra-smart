@@ -141,6 +141,25 @@
                                         <span class="badge" style="background-color: rgba(108, 117, 125, 0.3); color: #212529;">Mormon Lake to Flagstaff (201.3-238.2mi)</span>
                                         <span class="badge" style="background-color: rgba(220, 53, 69, 0.3); color: #721c24;">Flagstaff Finish (238.2-250mi)</span>
                                     </div>
+                                    
+                                    <!-- Aid Station Legend -->
+                                    <div class="mt-3">
+                                        <h6 class="mb-2"><i class="fas fa-first-aid"></i> Aid Stations:</h6>
+                                        <div class="d-flex align-items-center gap-3 flex-wrap">
+                                            <div class="d-flex align-items-center">
+                                                <div style="width: 20px; height: 3px; background-color: #4ecdc4; border-radius: 2px;" class="me-2"></div>
+                                                <span class="badge bg-light text-dark">🏃 Aid Stations</span>
+                                            </div>
+                                            <div class="d-flex align-items-center">
+                                                <div style="width: 20px; height: 3px; background-color: #17a2b8; border-radius: 2px;" class="me-2"></div>
+                                                <span class="badge bg-light text-dark">💧 Water Stations</span>
+                                            </div>
+                                            <div class="d-flex align-items-center">
+                                                <div style="width: 20px; height: 3px; background-color: #ff6b6b; border-radius: 2px;" class="me-2"></div>
+                                                <span class="badge bg-light text-dark">🛏️ Sleep Stations (Sedona Posse Grounds, Fort Tuthill)</span>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -255,6 +274,39 @@
                                 <div class="mb-4">
                                     <h6><i class="fas fa-chart-area"></i> Fatigue Progression Comparison</h6>
                                     <canvas id="multiRunnerFatigueChart" height="100"></canvas>
+                                    
+                                    <!-- Segment Legend -->
+                                    <div class="mt-3">
+                                        <h6 class="mb-2"><i class="fas fa-map"></i> Course Segments:</h6>
+                                        <div class="d-flex flex-wrap gap-2" style="font-size: 0.85rem;">
+                                            <span class="badge" style="background-color: rgba(220, 53, 69, 0.3); color: #721c24;">Phoenix Mountains (0-15.8mi)</span>
+                                            <span class="badge" style="background-color: rgba(255, 193, 7, 0.3); color: #664d03;">Granite to Spur Cross (15.8-24.1mi)</span>
+                                            <span class="badge" style="background-color: rgba(40, 167, 69, 0.3); color: #0a3622;">Spur Cross to Maggie's (24.1-43.1mi)</span>
+                                            <span class="badge" style="background-color: rgba(0, 123, 255, 0.3); color: #052c65;">Maggie's to Javelina (43.1-57.3mi)</span>
+                                            <span class="badge" style="background-color: rgba(108, 117, 125, 0.3); color: #212529;">Javelina to Vulture (57.3-87.2mi)</span>
+                                            <span class="badge" style="background-color: rgba(220, 53, 69, 0.3); color: #721c24;">Vulture to Prescott (87.2-115.2mi)</span>
+                                            <span class="badge" style="background-color: rgba(255, 193, 7, 0.3); color: #664d03;">Prescott to Jerome (115.2-137.4mi)</span>
+                                            <span class="badge" style="background-color: rgba(40, 167, 69, 0.3); color: #0a3622;">Jerome to Sedona (137.4-158.6mi)</span>
+                                            <span class="badge" style="background-color: rgba(0, 123, 255, 0.3); color: #052c65;">Sedona to Mormon Lake (158.6-201.3mi)</span>
+                                            <span class="badge" style="background-color: rgba(108, 117, 125, 0.3); color: #212529;">Mormon Lake to Flagstaff (201.3-238.2mi)</span>
+                                            <span class="badge" style="background-color: rgba(220, 53, 69, 0.3); color: #721c24;">Flagstaff Finish (238.2-250mi)</span>
+                                        </div>
+                                        
+                                        <!-- Aid Station Legend -->
+                                        <div class="mt-3">
+                                            <h6 class="mb-2"><i class="fas fa-first-aid"></i> Aid Stations:</h6>
+                                            <div class="d-flex align-items-center gap-4">
+                                                <div class="d-flex align-items-center">
+                                                    <div style="width: 20px; height: 3px; background-color: #4ecdc4; border-radius: 2px;" class="me-2"></div>
+                                                    <span class="badge bg-light text-dark">🏃 Regular Aid Stations</span>
+                                                </div>
+                                                <div class="d-flex align-items-center">
+                                                    <div style="width: 20px; height: 3px; background-color: #ff6b6b; border-radius: 2px;" class="me-2"></div>
+                                                    <span class="badge bg-light text-dark">🛏️ Sleep Stations (Javelina, Prescott, Sedona, Flagstaff)</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                                 
                                 <!-- Performance comparison table -->
@@ -526,7 +578,7 @@
             // Update summary stats
             document.getElementById('avgFatigue').textContent = analysis.fatigue_analysis?.average_fatigue?.toFixed(2) || 'N/A';
             document.getElementById('strongestTerrain').textContent = analysis.course_analysis?.strongest_terrain || 'N/A';
-            document.getElementById('restPeriods').textContent = analysis.rest_periods?.length || 0;
+            document.getElementById('restPeriods').textContent = analysis.rest_periods?.rest_periods?.length || analysis.rest_periods?.length || 0;
             
             // Create fatigue chart
             createFatigueChart(analysis.fatigue_analysis);
@@ -560,22 +612,49 @@
             const ctx = document.getElementById('fatigueChart').getContext('2d');
             const progression = fatigueData.fatigue_progression;
             
-            // Get course segments for background shading
+            // Get course segments for background shading (based on major aid stations)
             const segments = [
-                {name: "Phoenix Mountains", start: 0, end: 15.8, color: 'rgba(220, 53, 69, 0.1)'}, // Red
-                {name: "Granite to Spur Cross", start: 15.8, end: 24.1, color: 'rgba(255, 193, 7, 0.1)'}, // Yellow
-                {name: "Spur Cross to Maggie's", start: 24.1, end: 43.1, color: 'rgba(40, 167, 69, 0.1)'}, // Green
-                {name: "Maggie's to Javelina", start: 43.1, end: 57.3, color: 'rgba(0, 123, 255, 0.1)'}, // Blue
-                {name: "Javelina to Vulture", start: 57.3, end: 87.2, color: 'rgba(108, 117, 125, 0.1)'}, // Gray
-                {name: "Vulture to Prescott", start: 87.2, end: 115.2, color: 'rgba(220, 53, 69, 0.1)'}, // Red
-                {name: "Prescott to Jerome", start: 115.2, end: 137.4, color: 'rgba(255, 193, 7, 0.1)'}, // Yellow
-                {name: "Jerome to Sedona", start: 137.4, end: 158.6, color: 'rgba(40, 167, 69, 0.1)'}, // Green
-                {name: "Sedona to Mormon Lake", start: 158.6, end: 201.3, color: 'rgba(0, 123, 255, 0.1)'}, // Blue
-                {name: "Mormon Lake to Flagstaff", start: 201.3, end: 238.2, color: 'rgba(108, 117, 125, 0.1)'}, // Gray
-                {name: "Flagstaff Finish", start: 238.2, end: 250, color: 'rgba(220, 53, 69, 0.1)'} // Red
+                {name: "Desert Start to Crown King", start: 0, end: 36.6, color: 'rgba(220, 53, 69, 0.1)'}, // Red
+                {name: "Crown King to Whiskey Row", start: 36.6, end: 77.3, color: 'rgba(255, 193, 7, 0.1)'}, // Yellow
+                {name: "Whiskey Row to Jerome", start: 77.3, end: 125.3, color: 'rgba(40, 167, 69, 0.1)'}, // Green
+                {name: "Jerome to Sedona Sleep Station", start: 125.3, end: 162.3, color: 'rgba(0, 123, 255, 0.1)'}, // Blue
+                {name: "Sedona to Fort Tuthill Sleep", start: 162.3, end: 214.4, color: 'rgba(108, 117, 125, 0.1)'}, // Gray
+                {name: "Fort Tuthill to Finish", start: 214.4, end: 256.5, color: 'rgba(220, 53, 69, 0.1)'} // Red
             ];
 
-            // Define custom plugin for segment backgrounds
+            // Aid station data for markers (from runner's manual page 16 - 250 Miler)
+            const aidStations = [
+                {name: "Start Line - Deep Canyon Ranch", mile: 0, type: "major_aid", sleep: false, crew: false},
+                {name: "Cottonwood Creek", mile: 7.4, type: "aid", sleep: false, crew: false},
+                {name: "Water Station", mile: 10.4, type: "water", sleep: false, crew: false},
+                {name: "Water Station", mile: 24.6, type: "water", sleep: false, crew: false},
+                {name: "Lane Mtn by UltrAspire", mile: 32.5, type: "aid", sleep: false, crew: false},
+                {name: "Bumble Bee Ranch", mile: 36.6, type: "aid", sleep: false, crew: false}, // HOLD status
+                {name: "Crown King by Tailwind", mile: 36.6, type: "aid", sleep: false, crew: false},
+                {name: "Arrastra Creek", mile: 53, type: "aid", sleep: false, crew: false},
+                {name: "Kamp Kipa", mile: 62.4, type: "aid", sleep: false, crew: false},
+                {name: "Camp Wamatochick", mile: 69, type: "aid", sleep: false, crew: false},
+                {name: "Whiskey Row", mile: 77.3, type: "aid", sleep: false, crew: false},
+                {name: "Iron King", mile: 90.7, type: "aid", sleep: false, crew: false},
+                {name: "Fain Ranch by Satisfy Running", mile: 95.9, type: "aid", sleep: false, crew: false},
+                {name: "Mingus Mountain", mile: 108.3, type: "aid", sleep: false, crew: false},
+                {name: "Jerome", mile: 125.3, type: "aid", sleep: false, crew: false},
+                {name: "Dead Horse", mile: 134.0, type: "aid", sleep: false, crew: false},
+                {name: "Deer Pass", mile: 148.0, type: "aid", sleep: false, crew: false},
+                {name: "Water Station", mile: 154.7, type: "water", sleep: false, crew: false},
+                {name: "Sedona Posse Grounds", mile: 162.3, type: "major_aid", sleep: true, crew: false}, // Major sleep station
+                {name: "Water Station", mile: 173.6, type: "water", sleep: false, crew: false},
+                {name: "Foxboro Ranch", mile: 177.4, type: "aid", sleep: false, crew: false},
+                {name: "Munds Park", mile: 193.4, type: "aid", sleep: false, crew: false},
+                {name: "Kelly Canyon", mile: 206.0, type: "aid", sleep: false, crew: false},
+                {name: "Fort Tuthill", mile: 214.4, type: "major_aid", sleep: true, crew: false}, // Major sleep station
+                {name: "Walnut Canyon", mile: 230.5, type: "aid", sleep: false, crew: false},
+                {name: "Wildcat Hill", mile: 237.3, type: "aid", sleep: false, crew: false},
+                {name: "Trinity Heights", mile: 252.6, type: "aid", sleep: false, crew: false},
+                {name: "Finish Line - Heritage Square", mile: 256.5, type: "major_aid", sleep: false, crew: false}
+            ];
+
+            // Define custom plugin for segment backgrounds and aid station markers
             const segmentBackgroundPlugin = {
                 id: 'segmentBackground',
                 beforeDraw: (chart) => {
@@ -585,6 +664,7 @@
                     
                     if (!xScale || !chartArea) return;
                     
+                    // Draw segment backgrounds
                     segments.forEach(segment => {
                         const startX = xScale.getPixelForValue(segment.start);
                         const endX = xScale.getPixelForValue(segment.end);
@@ -593,6 +673,78 @@
                             ctx.save();
                             ctx.fillStyle = segment.color;
                             ctx.fillRect(startX, chartArea.top, endX - startX, chartArea.bottom - chartArea.top);
+                            ctx.restore();
+                        }
+                    });
+                },
+                afterDraw: (chart) => {
+                    const ctx = chart.ctx;
+                    const chartArea = chart.chartArea;
+                    const xScale = chart.scales.x;
+                    
+                    if (!xScale || !chartArea) return;
+                    
+                    // Draw aid station markers
+                    aidStations.forEach(station => {
+                        const x = xScale.getPixelForValue(station.mile);
+                        
+                        if (x >= chartArea.left && x <= chartArea.right) {
+                            ctx.save();
+                            
+                            const isWaterStation = station.type === 'water';
+                            
+                            // Draw vertical line
+                            let strokeColor, lineWidth, dashPattern;
+                            if (station.sleep) {
+                                strokeColor = '#ff6b6b';
+                                lineWidth = 3;
+                                dashPattern = [];
+                            } else if (isWaterStation) {
+                                strokeColor = '#17a2b8';
+                                lineWidth = 1;
+                                dashPattern = [2, 4];
+                            } else {
+                                strokeColor = '#4ecdc4';
+                                lineWidth = 2;
+                                dashPattern = [5, 5];
+                            }
+                            
+                            ctx.strokeStyle = strokeColor;
+                            ctx.lineWidth = lineWidth;
+                            ctx.setLineDash(dashPattern);
+                            ctx.beginPath();
+                            ctx.moveTo(x, chartArea.top);
+                            ctx.lineTo(x, chartArea.bottom);
+                            ctx.stroke();
+                            
+                            // Draw marker symbol
+                            if (station.sleep) {
+                                ctx.fillStyle = '#ff6b6b';
+                                // Sleep station - diamond shape
+                                ctx.beginPath();
+                                ctx.moveTo(x, chartArea.top - 8);
+                                ctx.lineTo(x + 6, chartArea.top - 2);
+                                ctx.lineTo(x, chartArea.top + 4);
+                                ctx.lineTo(x - 6, chartArea.top - 2);
+                                ctx.closePath();
+                                ctx.fill();
+                            } else if (isWaterStation) {
+                                ctx.fillStyle = '#17a2b8';
+                                // Water station - small triangle
+                                ctx.beginPath();
+                                ctx.moveTo(x, chartArea.top - 4);
+                                ctx.lineTo(x + 3, chartArea.top + 2);
+                                ctx.lineTo(x - 3, chartArea.top + 2);
+                                ctx.closePath();
+                                ctx.fill();
+                            } else {
+                                ctx.fillStyle = '#4ecdc4';
+                                // Regular aid station - circle
+                                ctx.beginPath();
+                                ctx.arc(x, chartArea.top - 2, 4, 0, 2 * Math.PI);
+                                ctx.fill();
+                            }
+                            
                             ctx.restore();
                         }
                     });
@@ -625,16 +777,56 @@
                 },
                 options: {
                     responsive: true,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false,
+                    },
                     plugins: {
                         legend: {
                             position: 'top',
+                            onClick: function(e, legendItem, legend) {
+                                const index = legendItem.datasetIndex;
+                                const chart = legend.chart;
+                                const meta = chart.getDatasetMeta(index);
+
+                                // Toggle dataset visibility
+                                meta.hidden = meta.hidden === null ? !chart.data.datasets[index].hidden : null;
+                                chart.update();
+                            }
                         },
                         tooltip: {
                             callbacks: {
+                                title: function(context) {
+                                    return `Mile ${context[0].parsed.x}`;
+                                },
                                 afterLabel: function(context) {
                                     const mile = context.parsed.x;
                                     const segment = segments.find(s => mile >= s.start && mile < s.end);
-                                    return segment ? `Segment: ${segment.name}` : '';
+                                    const nearbyAid = aidStations.find(a => Math.abs(a.mile - mile) < 1);
+                                    
+                                    let info = [];
+                                    if (segment) {
+                                        info.push(`Segment: ${segment.name}`);
+                                    }
+                                    if (nearbyAid) {
+                                        const icon = nearbyAid.sleep ? '🛏️' : 
+                                                   nearbyAid.type === 'water' ? '💧' : '🏃';
+                                        const suffix = nearbyAid.type === 'water' ? ' (Water Station)' : '';
+                                        info.push(`${icon} ${nearbyAid.name}${suffix}`);
+                                    }
+                                    return info;
+                                },
+                                footer: function(context) {
+                                    // Add additional context for single runner
+                                    const dataPoint = context[0];
+                                    if (dataPoint.datasetIndex === 0) { // Fatigue factor
+                                        const fatigue = dataPoint.parsed.y;
+                                        if (fatigue > 1.5) return 'High fatigue level';
+                                        if (fatigue > 1.2) return 'Moderate fatigue';
+                                        if (fatigue < 0.8) return 'Strong performance';
+                                        return 'Normal fatigue level';
+                                    }
+                                    return '';
                                 }
                             }
                         }
@@ -709,28 +901,78 @@
             tbody.innerHTML = html;
         }
 
-        function updateRestPeriodsList(restPeriods) {
+        function updateRestPeriodsList(restData) {
             const container = document.getElementById('restPeriodsList');
+            
+            // Handle new data structure
+            const restPeriods = restData.rest_periods || restData || [];
+            const aidStationStops = restData.aid_station_stops || [];
+            const patterns = restData.aid_station_patterns || {};
             
             if (restPeriods.length === 0) {
                 container.innerHTML = '<p class="text-muted">No significant rest periods detected.</p>';
                 return;
             }
             
-            const html = restPeriods.map(rest => `
-                <div class="alert alert-info">
-                    <div class="d-flex justify-content-between">
-                        <div>
-                            <strong>Mile ${rest.mile}</strong>
-                            ${rest.nearby_aid_station ? ` - Near ${rest.nearby_aid_station}` : ''}
-                        </div>
-                        <div class="text-end">
-                            <small>${rest.estimated_rest_minutes.toFixed(1)} min slower than expected</small>
+            let html = '';
+            
+            // Add aid station patterns summary if available
+            if (patterns && Object.keys(patterns).length > 0) {
+                html += `
+                    <div class="alert alert-success mb-3">
+                        <h6><i class="fas fa-chart-bar"></i> Aid Station Usage Pattern</h6>
+                        <div class="row">
+                            <div class="col-md-4">
+                                <small><strong>Strategy:</strong> ${patterns.rest_strategy?.replace(/_/g, ' ') || 'N/A'}</small><br>
+                                <small><strong>Total Aid Stops:</strong> ${patterns.total_aid_station_stops || 0}</small><br>
+                            </div>
+                            <div class="col-md-4">
+                                <small><strong>Sleep Stations Used:</strong> ${patterns.sleep_station_usage || 0}/4</small><br>
+                                <small><strong>Crew Rest Usage:</strong> ${patterns.crew_rest_usage || 0}/6</small><br>
+                            </div>
+                            <div class="col-md-4">
+                                <small><strong>Longest Rest:</strong> ${patterns.longest_rest_station || 'N/A'}</small><br>
+                                <small><strong>Duration:</strong> ${(patterns.longest_rest_duration || 0).toFixed(1)} minutes</small>
+                            </div>
                         </div>
                     </div>
-                    <small class="text-muted">${rest.likely_reason}</small>
-                </div>
-            `).join('');
+                `;
+            }
+            
+            // Display individual rest periods
+            html += restPeriods.map(rest => {
+                const isCrewRest = rest.rest_type?.startsWith('crew');
+                const alertClass = rest.is_sleep_station ? 'alert-warning' : 
+                                 isCrewRest ? 'alert-primary' :
+                                 rest.rest_type === 'medical' ? 'alert-danger' : 'alert-info';
+                const icon = rest.is_sleep_station ? 'fas fa-bed' :
+                           isCrewRest ? 'fas fa-users' :
+                           rest.rest_type === 'medical' ? 'fas fa-medkit' :
+                           rest.rest_type === 'resupply' ? 'fas fa-box' : 'fas fa-clock';
+                
+                return `
+                    <div class="alert ${alertClass}">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <div class="mb-1">
+                                    <i class="${icon}"></i> <strong>Mile ${rest.mile}</strong>
+                                    ${rest.nearby_aid_station ? ` - ${rest.nearby_aid_station}` : ''}
+                                    ${rest.is_sleep_station ? '<span class="badge bg-warning ms-2">Sleep Station</span>' : ''}
+                                </div>
+                                <small class="text-muted d-block">${rest.likely_reason}</small>
+                                ${rest.aid_services && rest.aid_services.length > 0 ? 
+                                    `<small class="text-muted">Services: ${rest.aid_services.join(', ')}</small>` : ''
+                                }
+                            </div>
+                            <div class="text-end">
+                                <div><small><strong>${rest.estimated_rest_minutes.toFixed(1)} min</strong> rest</small></div>
+                                <div><small class="text-muted">${(rest.pace_ratio).toFixed(1)}x slower</small></div>
+                                <small class="badge bg-secondary">${rest.confidence} confidence</small>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
             
             container.innerHTML = html;
         }
@@ -783,7 +1025,7 @@
                 {name: "Jerome to Sedona", start: 137.4, end: 158.6, color: 'rgba(40, 167, 69, 0.08)'}, // Green
                 {name: "Sedona to Mormon Lake", start: 158.6, end: 201.3, color: 'rgba(0, 123, 255, 0.08)'}, // Blue
                 {name: "Mormon Lake to Flagstaff", start: 201.3, end: 238.2, color: 'rgba(108, 117, 125, 0.08)'}, // Gray
-                {name: "Flagstaff Finish", start: 238.2, end: 250, color: 'rgba(220, 53, 69, 0.08)'} // Red
+                {name: "Flagstaff Finish", start: 238.2, end: 256.5, color: 'rgba(220, 53, 69, 0.08)'} // Red
             ];
 
             const datasets = selectedRunners.map((runnerId, index) => {
@@ -804,7 +1046,36 @@
                 };
             });
 
-            // Define custom plugin for segment backgrounds
+            // Aid stations for multi-runner chart (from runner's manual page 16 - 250 Miler)
+            const multiRunnerAidStations = [
+                {name: "Start Line - Deep Canyon Ranch", mile: 0, type: "major_aid", sleep: false},
+                {name: "Cottonwood Creek", mile: 7.4, type: "aid", sleep: false},
+                {name: "Water Station", mile: 10.4, type: "water", sleep: false},
+                {name: "Water Station", mile: 24.6, type: "water", sleep: false},
+                {name: "Lane Mtn by UltrAspire", mile: 32.5, type: "aid", sleep: false},
+                {name: "Crown King by Tailwind", mile: 36.6, type: "aid", sleep: false},
+                {name: "Arrastra Creek", mile: 53, type: "aid", sleep: false},
+                {name: "Kamp Kipa", mile: 62.4, type: "aid", sleep: false},
+                {name: "Camp Wamatochick", mile: 69, type: "aid", sleep: false},
+                {name: "Whiskey Row", mile: 77.3, type: "aid", sleep: false},
+                {name: "Iron King", mile: 90.7, type: "aid", sleep: false},
+                {name: "Fain Ranch by Satisfy Running", mile: 95.9, type: "aid", sleep: false},
+                {name: "Mingus Mountain", mile: 108.3, type: "aid", sleep: false},
+                {name: "Jerome", mile: 125.3, type: "aid", sleep: false},
+                {name: "Dead Horse", mile: 134.0, type: "aid", sleep: false},
+                {name: "Deer Pass", mile: 148.0, type: "aid", sleep: false},
+                {name: "Sedona Posse Grounds", mile: 162.3, type: "major_aid", sleep: true},
+                {name: "Foxboro Ranch", mile: 177.4, type: "aid", sleep: false},
+                {name: "Munds Park", mile: 193.4, type: "aid", sleep: false},
+                {name: "Kelly Canyon", mile: 206.0, type: "aid", sleep: false},
+                {name: "Fort Tuthill", mile: 214.4, type: "major_aid", sleep: true},
+                {name: "Walnut Canyon", mile: 230.5, type: "aid", sleep: false},
+                {name: "Wildcat Hill", mile: 237.3, type: "aid", sleep: false},
+                {name: "Trinity Heights", mile: 252.6, type: "aid", sleep: false},
+                {name: "Finish Line - Heritage Square", mile: 256.5, type: "major_aid", sleep: false}
+            ];
+
+            // Define custom plugin for segment backgrounds and aid station markers
             const multiRunnerSegmentPlugin = {
                 id: 'multiRunnerSegmentBackground',
                 beforeDraw: (chart) => {
@@ -814,6 +1085,7 @@
                     
                     if (!xScale || !chartArea) return;
                     
+                    // Draw segment backgrounds
                     segments.forEach(segment => {
                         const startX = xScale.getPixelForValue(segment.start);
                         const endX = xScale.getPixelForValue(segment.end);
@@ -824,6 +1096,78 @@
                             ctx.fillRect(Math.max(startX, chartArea.left), chartArea.top, 
                                        Math.min(endX, chartArea.right) - Math.max(startX, chartArea.left), 
                                        chartArea.bottom - chartArea.top);
+                            ctx.restore();
+                        }
+                    });
+                },
+                afterDraw: (chart) => {
+                    const ctx = chart.ctx;
+                    const chartArea = chart.chartArea;
+                    const xScale = chart.scales.x;
+                    
+                    if (!xScale || !chartArea) return;
+                    
+                    // Draw aid station markers
+                    multiRunnerAidStations.forEach(station => {
+                        const x = xScale.getPixelForValue(station.mile);
+                        
+                        if (x >= chartArea.left && x <= chartArea.right) {
+                            ctx.save();
+                            
+                            const isWaterStation = station.type === 'water';
+                            
+                            // Draw vertical line (lighter for multi-runner)
+                            let strokeColor, lineWidth, dashPattern;
+                            if (station.sleep) {
+                                strokeColor = '#ff6b6b80';
+                                lineWidth = 2;
+                                dashPattern = [];
+                            } else if (isWaterStation) {
+                                strokeColor = '#17a2b880';
+                                lineWidth = 1;
+                                dashPattern = [2, 4];
+                            } else {
+                                strokeColor = '#4ecdc480';
+                                lineWidth = 1;
+                                dashPattern = [5, 5];
+                            }
+                            
+                            ctx.strokeStyle = strokeColor;
+                            ctx.lineWidth = lineWidth;
+                            ctx.setLineDash(dashPattern);
+                            ctx.beginPath();
+                            ctx.moveTo(x, chartArea.top);
+                            ctx.lineTo(x, chartArea.bottom);
+                            ctx.stroke();
+                            
+                            // Draw marker symbol (smaller for multi-runner)
+                            if (station.sleep) {
+                                ctx.fillStyle = '#ff6b6b';
+                                // Sleep station - diamond shape
+                                ctx.beginPath();
+                                ctx.moveTo(x, chartArea.top - 6);
+                                ctx.lineTo(x + 4, chartArea.top - 2);
+                                ctx.lineTo(x, chartArea.top + 2);
+                                ctx.lineTo(x - 4, chartArea.top - 2);
+                                ctx.closePath();
+                                ctx.fill();
+                            } else if (isWaterStation) {
+                                ctx.fillStyle = '#17a2b8';
+                                // Water station - small triangle
+                                ctx.beginPath();
+                                ctx.moveTo(x, chartArea.top - 3);
+                                ctx.lineTo(x + 2, chartArea.top + 1);
+                                ctx.lineTo(x - 2, chartArea.top + 1);
+                                ctx.closePath();
+                                ctx.fill();
+                            } else {
+                                ctx.fillStyle = '#4ecdc4';
+                                // Regular aid station - circle
+                                ctx.beginPath();
+                                ctx.arc(x, chartArea.top - 2, 3, 0, 2 * Math.PI);
+                                ctx.fill();
+                            }
+                            
                             ctx.restore();
                         }
                     });
@@ -861,7 +1205,19 @@
                                 afterLabel: function(context) {
                                     const mile = context.parsed.x;
                                     const segment = segments.find(s => mile >= s.start && mile < s.end);
-                                    return segment ? `Segment: ${segment.name}` : '';
+                                    const nearbyAid = multiRunnerAidStations.find(a => Math.abs(a.mile - mile) < 1);
+                                    
+                                    let info = [];
+                                    if (segment) {
+                                        info.push(`Segment: ${segment.name}`);
+                                    }
+                                    if (nearbyAid) {
+                                        const icon = nearbyAid.sleep ? '🛏️' : 
+                                                   nearbyAid.type === 'water' ? '💧' : '🏃';
+                                        const suffix = nearbyAid.type === 'water' ? ' (Water Station)' : '';
+                                        info.push(`${icon} ${nearbyAid.name}${suffix}`);
+                                    }
+                                    return info;
                                 },
                                 footer: function(context) {
                                     // Show relative performance

@@ -38,8 +38,13 @@
             <div class="col-md-6 col-lg-{{ (12 // athletes_data|length) if athletes_data|length <= 4 else 3 }} mb-3">
                 <div class="card athlete-summary h-100">
                     <div class="card-header bg-primary text-white">
-                        <h6 class="mb-0">
+                        <h6 class="fs-4 mb-0">
                             <i class="fas fa-user"></i> {{ name }}
+                            <div class="fs-6 mt-2 mb-0">
+                                <i class="fas fa-id-badge"></i> Bib {{ athlete.bib_number }}
+                                {% if athlete.age %}<span class="mx-2">|</span> Age {{ athlete.age }}{% endif %}
+                                {% if athlete.gender %}<span class="mx-2">|</span> {{ athlete.gender }}{% endif %}
+                            </div>
                         </h6>
                     </div>
                     <div class="card-body">
