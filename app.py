@@ -1268,6 +1268,24 @@ def api_advanced_analysis():
         print(f"Advanced analysis error: {e}")
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/course_map_data')
+def get_course_map_data():
+    """API endpoint to serve course map data from GPX parsing"""
+    try:
+        # Load web-friendly map data generated from GPX
+        map_data_path = '/home/jasongarcia24/Documents/ultra-smart/data/cocodona_250_map_data.json'
+        
+        if os.path.exists(map_data_path):
+            with open(map_data_path, 'r') as f:
+                map_data = json_lib.load(f)
+            return jsonify(map_data)
+        else:
+            return jsonify({'error': 'Map data not available'}), 404
+            
+    except Exception as e:
+        print(f"Course map data error: {e}")
+        return jsonify({'error': str(e)}), 500
+
 # Template filters
 app.jinja_env.filters['format_time'] = format_time
 app.jinja_env.filters['format_pace'] = format_pace

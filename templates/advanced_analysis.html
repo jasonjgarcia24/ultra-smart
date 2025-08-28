@@ -7,8 +7,10 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
 <body>
     <div class="container-fluid mt-4">
@@ -61,6 +63,23 @@
                             <div id="selectedRunnersList" class="d-flex flex-wrap gap-2">
                                 <!-- Selected runners will appear here -->
                             </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Course Map -->
+        <div class="row mb-4" id="courseMapSection" style="display: none;">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-map"></i> Cocodona 250 Course Map</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="courseMap" style="height: 500px; width: 100%;"></div>
+                        <div class="mt-2">
+                            <small class="text-muted">Interactive course map with aid stations. GPX data: 256.2 miles, 27 waypoints.</small>
                         </div>
                     </div>
                 </div>
@@ -125,22 +144,6 @@
                             <div class="card-body">
                                 <canvas id="fatigueChart" height="100"></canvas>
                                 
-                                <!-- Segment Legend -->
-                                <div class="mt-3">
-                                    <h6 class="mb-2"><i class="fas fa-map"></i> Course Segments:</h6>
-                                    <div class="d-flex flex-wrap gap-2" style="font-size: 0.85rem;">
-                                        <span class="badge" style="background-color: rgba(220, 53, 69, 0.3); color: #721c24;">Phoenix Mountains (0-15.8mi)</span>
-                                        <span class="badge" style="background-color: rgba(255, 193, 7, 0.3); color: #664d03;">Granite to Spur Cross (15.8-24.1mi)</span>
-                                        <span class="badge" style="background-color: rgba(40, 167, 69, 0.3); color: #0a3622;">Spur Cross to Maggie's (24.1-43.1mi)</span>
-                                        <span class="badge" style="background-color: rgba(0, 123, 255, 0.3); color: #052c65;">Maggie's to Javelina (43.1-57.3mi)</span>
-                                        <span class="badge" style="background-color: rgba(108, 117, 125, 0.3); color: #212529;">Javelina to Vulture (57.3-87.2mi)</span>
-                                        <span class="badge" style="background-color: rgba(220, 53, 69, 0.3); color: #721c24;">Vulture to Prescott (87.2-115.2mi)</span>
-                                        <span class="badge" style="background-color: rgba(255, 193, 7, 0.3); color: #664d03;">Prescott to Jerome (115.2-137.4mi)</span>
-                                        <span class="badge" style="background-color: rgba(40, 167, 69, 0.3); color: #0a3622;">Jerome to Sedona (137.4-158.6mi)</span>
-                                        <span class="badge" style="background-color: rgba(0, 123, 255, 0.3); color: #052c65;">Sedona to Mormon Lake (158.6-201.3mi)</span>
-                                        <span class="badge" style="background-color: rgba(108, 117, 125, 0.3); color: #212529;">Mormon Lake to Flagstaff (201.3-238.2mi)</span>
-                                        <span class="badge" style="background-color: rgba(220, 53, 69, 0.3); color: #721c24;">Flagstaff Finish (238.2-250mi)</span>
-                                    </div>
                                     
                                     <!-- Aid Station Legend -->
                                     <div class="mt-3">
@@ -174,6 +177,82 @@
                                 <h5><i class="fas fa-route"></i> Course Segment Performance</h5>
                             </div>
                             <div class="card-body">
+                                <!-- Performance Score Explanation (Collapsible) -->
+                                <div class="mb-3">
+                                    <button class="btn btn-outline-info btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#performanceExplanation" aria-expanded="false" aria-controls="performanceExplanation">
+                                        <i class="fas fa-info-circle"></i> Understanding Performance Scores
+                                    </button>
+                                </div>
+                                
+                                <div class="collapse mb-4" id="performanceExplanation">
+                                    <div class="card border-info">
+                                        <div class="card-body">
+                                            <h6 class="card-title text-info"><i class="fas fa-chart-line"></i> How Performance Scores Work</h6>
+                                            <p class="small mb-3">
+                                                <strong>Performance scores compare this runner against all other runners in the field</strong> on each segment, 
+                                                not just their individual performance. This shows competitive performance rather than personal pacing.
+                                            </p>
+                                            
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <h6 class="small fw-bold">Comparative Benchmarks:</h6>
+                                                    <ul class="small mb-3">
+                                                        <li><strong>Segment Leader:</strong> Fastest pace achieved by any runner on that segment</li>
+                                                        <li><strong>Race Winner:</strong> How the overall race winner performed on that segment</li>
+                                                        <li><strong>Field Average:</strong> Average pace of all runners on that segment</li>
+                                                    </ul>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <h6 class="small fw-bold">Score Interpretation:</h6>
+                                                    <ul class="small mb-3">
+                                                        <li><span class="text-success fw-bold">80-100%:</span> Excellent (top 20%)</li>
+                                                        <li><span class="text-warning fw-bold">60-80%:</span> Good (above average)</li>
+                                                        <li><span class="text-primary fw-bold">40-60%:</span> Average (middle of pack)</li>
+                                                        <li><span class="text-danger fw-bold">0-40%:</span> Below average</li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="mt-4">
+                                                <h6 class="small fw-bold">Difficulty Rating Calculation:</h6>
+                                                <div class="row">
+                                                    <div class="col-md-6">
+                                                        <p class="small mb-2"><strong>Primary Factor - Elevation Gain:</strong></p>
+                                                        <ul class="small mb-3">
+                                                            <li><strong>Very Steep</strong> (&gt;400 ft/mile): +1.8 ⭐</li>
+                                                            <li><strong>Steep</strong> (250-400 ft/mile): +1.2 ⭐</li>
+                                                            <li><strong>Moderate</strong> (150-250 ft/mile): +0.8 ⭐</li>
+                                                            <li><strong>Gentle</strong> (75-150 ft/mile): +0.4 ⭐</li>
+                                                            <li><strong>Flat</strong> (&lt;25 ft/mile): -0.2 ⭐</li>
+                                                        </ul>
+                                                        
+                                                        <p class="small mb-2"><strong>Additional Elevation Factors:</strong></p>
+                                                        <ul class="small mb-3">
+                                                            <li><strong>Steep Descents</strong> (&gt;300 ft/mile): +0.6 ⭐</li>
+                                                            <li><strong>Rolling Terrain</strong> (high gain + loss): +0.4 ⭐</li>
+                                                        </ul>
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <p class="small mb-2"><strong>Other Factors:</strong></p>
+                                                        <ul class="small mb-3">
+                                                            <li><strong>Performance Data:</strong> How much runners slow down historically</li>
+                                                            <li><strong>Segment Distance:</strong> Longer segments (+0.3-0.5 ⭐)</li>
+                                                            <li><strong>Race Position:</strong> Late race fatigue (+0.3-0.8 ⭐)</li>
+                                                            <li><strong>Aid Station Types:</strong> Sleep stations, medical, gear checks</li>
+                                                            <li><strong>Known Challenges:</strong> Mingus Mountain, Wildcat Hill, etc.</li>
+                                                        </ul>
+                                                    </div>
+                                                </div>
+                                                
+                                                <div class="alert alert-light mb-0">
+                                                    <small><i class="fas fa-mountain text-primary"></i> 
+                                                    <strong>Star Rating Scale:</strong> ⭐ Very Easy (1.0-1.5) | ⭐⭐ Easy (1.5-2.5) | ⭐⭐⭐ Moderate (2.5-3.5) | ⭐⭐⭐⭐ Hard (3.5-4.5) | ⭐⭐⭐⭐⭐ Extreme (4.5-5.0)</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
                                 <div class="table-responsive">
                                     <table class="table table-striped" id="segmentTable">
                                         <thead>
@@ -275,22 +354,6 @@
                                     <h6><i class="fas fa-chart-area"></i> Fatigue Progression Comparison</h6>
                                     <canvas id="multiRunnerFatigueChart" height="100"></canvas>
                                     
-                                    <!-- Segment Legend -->
-                                    <div class="mt-3">
-                                        <h6 class="mb-2"><i class="fas fa-map"></i> Course Segments:</h6>
-                                        <div class="d-flex flex-wrap gap-2" style="font-size: 0.85rem;">
-                                            <span class="badge" style="background-color: rgba(220, 53, 69, 0.3); color: #721c24;">Phoenix Mountains (0-15.8mi)</span>
-                                            <span class="badge" style="background-color: rgba(255, 193, 7, 0.3); color: #664d03;">Granite to Spur Cross (15.8-24.1mi)</span>
-                                            <span class="badge" style="background-color: rgba(40, 167, 69, 0.3); color: #0a3622;">Spur Cross to Maggie's (24.1-43.1mi)</span>
-                                            <span class="badge" style="background-color: rgba(0, 123, 255, 0.3); color: #052c65;">Maggie's to Javelina (43.1-57.3mi)</span>
-                                            <span class="badge" style="background-color: rgba(108, 117, 125, 0.3); color: #212529;">Javelina to Vulture (57.3-87.2mi)</span>
-                                            <span class="badge" style="background-color: rgba(220, 53, 69, 0.3); color: #721c24;">Vulture to Prescott (87.2-115.2mi)</span>
-                                            <span class="badge" style="background-color: rgba(255, 193, 7, 0.3); color: #664d03;">Prescott to Jerome (115.2-137.4mi)</span>
-                                            <span class="badge" style="background-color: rgba(40, 167, 69, 0.3); color: #0a3622;">Jerome to Sedona (137.4-158.6mi)</span>
-                                            <span class="badge" style="background-color: rgba(0, 123, 255, 0.3); color: #052c65;">Sedona to Mormon Lake (158.6-201.3mi)</span>
-                                            <span class="badge" style="background-color: rgba(108, 117, 125, 0.3); color: #212529;">Mormon Lake to Flagstaff (201.3-238.2mi)</span>
-                                            <span class="badge" style="background-color: rgba(220, 53, 69, 0.3); color: #721c24;">Flagstaff Finish (238.2-250mi)</span>
-                                        </div>
                                         
                                         <!-- Aid Station Legend -->
                                         <div class="mt-3">
@@ -580,8 +643,9 @@
             document.getElementById('strongestTerrain').textContent = analysis.course_analysis?.strongest_terrain || 'N/A';
             document.getElementById('restPeriods').textContent = analysis.rest_periods?.rest_periods?.length || analysis.rest_periods?.length || 0;
             
-            // Create fatigue chart
-            createFatigueChart(analysis.fatigue_analysis);
+            // Create fatigue chart with course segments
+            createFatigueChart(analysis.fatigue_analysis, analysis.course_analysis.segment_analysis);
+            
             
             // Update tables
             updateSegmentTable(analysis.course_analysis.segment_analysis);
@@ -596,14 +660,17 @@
             singleDiv.style.display = 'none';
             multiDiv.style.display = 'block';
             
-            // Create multi-runner fatigue chart
-            createMultiRunnerFatigueChart(data.analyses);
+            // Create multi-runner fatigue chart - use segments from first runner's analysis
+            const firstRunnerData = Object.values(data.analyses)[0];
+            const courseSegments = firstRunnerData?.course_analysis?.segment_analysis;
+            createMultiRunnerFatigueChart(data.analyses, courseSegments);
+            
             
             // Update comparison table
             updateMultiRunnerTable(data.analyses);
         }
 
-        function createFatigueChart(fatigueData) {
+        function createFatigueChart(fatigueData, courseSegments) {
             if (!fatigueData || !fatigueData.fatigue_progression) {
                 console.error('Invalid fatigue data for chart:', fatigueData);
                 return;
@@ -612,47 +679,64 @@
             const ctx = document.getElementById('fatigueChart').getContext('2d');
             const progression = fatigueData.fatigue_progression;
             
-            // Get course segments for background shading (based on major aid stations)
-            const segments = [
-                {name: "Desert Start to Crown King", start: 0, end: 36.6, color: 'rgba(220, 53, 69, 0.1)'}, // Red
-                {name: "Crown King to Whiskey Row", start: 36.6, end: 77.3, color: 'rgba(255, 193, 7, 0.1)'}, // Yellow
-                {name: "Whiskey Row to Jerome", start: 77.3, end: 125.3, color: 'rgba(40, 167, 69, 0.1)'}, // Green
-                {name: "Jerome to Sedona Sleep Station", start: 125.3, end: 162.3, color: 'rgba(0, 123, 255, 0.1)'}, // Blue
-                {name: "Sedona to Fort Tuthill Sleep", start: 162.3, end: 214.4, color: 'rgba(108, 117, 125, 0.1)'}, // Gray
-                {name: "Fort Tuthill to Finish", start: 214.4, end: 256.5, color: 'rgba(220, 53, 69, 0.1)'} // Red
-            ];
+            // Use dynamic course segments if provided, otherwise fall back to hardcoded
+            let segments = [];
+            if (courseSegments && courseSegments.length > 0) {
+                // Create segments with two alternating soft colors
+                const colors = [
+                    'rgba(173, 216, 230, 0.15)',  // Light blue
+                    'rgba(221, 221, 221, 0.15)'   // Light gray
+                ];
+                
+                segments = courseSegments.map((segment, index) => ({
+                    name: segment.segment_name,
+                    start: segment.start_mile,
+                    end: segment.end_mile,
+                    color: colors[index % colors.length]
+                }));
+            } else {
+                // Fallback to hardcoded segments with two alternating colors
+                const colors = ['rgba(173, 216, 230, 0.15)', 'rgba(221, 221, 221, 0.15)'];
+                segments = [
+                    {name: "Desert Start to Crown King", start: 0, end: 36.6, color: colors[0]},
+                    {name: "Crown King to Whiskey Row", start: 36.6, end: 77.3, color: colors[1]},
+                    {name: "Whiskey Row to Jerome", start: 77.3, end: 125.3, color: colors[0]},
+                    {name: "Jerome to Sedona Sleep Station", start: 125.3, end: 162.3, color: colors[1]},
+                    {name: "Sedona to Fort Tuthill Sleep", start: 162.3, end: 214.4, color: colors[0]},
+                    {name: "Fort Tuthill to Finish", start: 214.4, end: 256.5, color: colors[1]}
+                ];
+            }
 
-            // Aid station data for markers (from runner's manual page 16 - 250 Miler)
-            const aidStations = [
-                {name: "Start Line - Deep Canyon Ranch", mile: 0, type: "major_aid", sleep: false, crew: false},
-                {name: "Cottonwood Creek", mile: 7.4, type: "aid", sleep: false, crew: false},
-                {name: "Water Station", mile: 10.4, type: "water", sleep: false, crew: false},
-                {name: "Water Station", mile: 24.6, type: "water", sleep: false, crew: false},
-                {name: "Lane Mtn by UltrAspire", mile: 32.5, type: "aid", sleep: false, crew: false},
-                {name: "Bumble Bee Ranch", mile: 36.6, type: "aid", sleep: false, crew: false}, // HOLD status
-                {name: "Crown King by Tailwind", mile: 36.6, type: "aid", sleep: false, crew: false},
-                {name: "Arrastra Creek", mile: 53, type: "aid", sleep: false, crew: false},
-                {name: "Kamp Kipa", mile: 62.4, type: "aid", sleep: false, crew: false},
-                {name: "Camp Wamatochick", mile: 69, type: "aid", sleep: false, crew: false},
-                {name: "Whiskey Row", mile: 77.3, type: "aid", sleep: false, crew: false},
-                {name: "Iron King", mile: 90.7, type: "aid", sleep: false, crew: false},
-                {name: "Fain Ranch by Satisfy Running", mile: 95.9, type: "aid", sleep: false, crew: false},
-                {name: "Mingus Mountain", mile: 108.3, type: "aid", sleep: false, crew: false},
-                {name: "Jerome", mile: 125.3, type: "aid", sleep: false, crew: false},
-                {name: "Dead Horse", mile: 134.0, type: "aid", sleep: false, crew: false},
-                {name: "Deer Pass", mile: 148.0, type: "aid", sleep: false, crew: false},
-                {name: "Water Station", mile: 154.7, type: "water", sleep: false, crew: false},
-                {name: "Sedona Posse Grounds", mile: 162.3, type: "major_aid", sleep: true, crew: false}, // Major sleep station
-                {name: "Water Station", mile: 173.6, type: "water", sleep: false, crew: false},
-                {name: "Foxboro Ranch", mile: 177.4, type: "aid", sleep: false, crew: false},
-                {name: "Munds Park", mile: 193.4, type: "aid", sleep: false, crew: false},
-                {name: "Kelly Canyon", mile: 206.0, type: "aid", sleep: false, crew: false},
-                {name: "Fort Tuthill", mile: 214.4, type: "major_aid", sleep: true, crew: false}, // Major sleep station
-                {name: "Walnut Canyon", mile: 230.5, type: "aid", sleep: false, crew: false},
-                {name: "Wildcat Hill", mile: 237.3, type: "aid", sleep: false, crew: false},
-                {name: "Trinity Heights", mile: 252.6, type: "aid", sleep: false, crew: false},
-                {name: "Finish Line - Heritage Square", mile: 256.5, type: "major_aid", sleep: false, crew: false}
-            ];
+            // Create aid station markers from segment data
+            let aidStations = [];
+            if (courseSegments && courseSegments.length > 0) {
+                // Extract unique aid stations from segment start/end points
+                const stationMiles = new Set();
+                courseSegments.forEach(segment => {
+                    if (!stationMiles.has(segment.start_mile)) {
+                        stationMiles.add(segment.start_mile);
+                        // Extract station name from segment name (before " to ")
+                        const startName = segment.segment_name.split(' to ')[0];
+                        aidStations.push({
+                            name: startName,
+                            mile: segment.start_mile,
+                            type: "aid",
+                            sleep: false,
+                            crew: false
+                        });
+                    }
+                });
+                // Add the final station
+                const lastSegment = courseSegments[courseSegments.length - 1];
+                const endName = lastSegment.segment_name.split(' to ')[1];
+                aidStations.push({
+                    name: endName,
+                    mile: lastSegment.end_mile,
+                    type: "aid",
+                    sleep: false,
+                    crew: false
+                });
+            } // No longer need fallback - using complete CSV data
 
             // Define custom plugin for segment backgrounds and aid station markers
             const segmentBackgroundPlugin = {
@@ -833,6 +917,7 @@
                     },
                     scales: {
                         x: {
+                            position: 'bottom',
                             display: true,
                             title: {
                                 display: true,
@@ -840,6 +925,61 @@
                             },
                             grid: {
                                 color: 'rgba(0, 0, 0, 0.1)'
+                            },
+                            ticks: {
+                                callback: function(value, index, values) {
+                                    // Show mile markers every 25 miles
+                                    if (value % 25 === 0 && value > 0) {
+                                        return Math.round(value);
+                                    } else if (value === 0) {
+                                        return 'Start';
+                                    }
+                                    return '';
+                                },
+                                maxTicksLimit: 15
+                            }
+                        },
+                        xTop: {
+                            position: 'top',
+                            type: 'linear',
+                            display: true,
+                            title: {
+                                display: true,
+                                text: 'Aid Stations',
+                                font: {
+                                    size: 11
+                                }
+                            },
+                            grid: {
+                                display: false
+                            },
+                            min: 0,
+                            max: 260,
+                            afterBuildTicks: function(axis) {
+                                // Force ticks at aid station locations
+                                axis.ticks = aidStations.map(station => ({
+                                    value: station.mile,
+                                    label: station.mile
+                                }));
+                            },
+                            ticks: {
+                                callback: function(value, index, values) {
+                                    // Show aid station names at their exact locations
+                                    const station = aidStations.find(s => Math.abs(s.mile - value) < 0.1);
+                                    
+                                    if (station) {
+                                        const shortName = station.name.length > 15 ? 
+                                            station.name.substring(0, 12) + '...' : station.name;
+                                        const sleepIcon = station.sleep ? ' 🛏️' : '';
+                                        const crewIcon = station.crew ? ' 👥' : '';
+                                        return `${shortName}${sleepIcon}${crewIcon}`;
+                                    }
+                                    return '';
+                                },
+                                font: {
+                                    size: 9
+                                },
+                                color: '#666'
                             }
                         },
                         y: {
@@ -877,6 +1017,7 @@
                 return;
             }
             
+            
             const tbody = document.querySelector('#segmentTable tbody');
             
             const html = segmentData.map(segment => `
@@ -884,7 +1025,46 @@
                     <td>${segment.segment_name}</td>
                     <td>${segment.start_mile.toFixed(1)} - ${segment.end_mile.toFixed(1)}</td>
                     <td><span class="badge bg-secondary">${segment.terrain_type}</span></td>
-                    <td>${'★'.repeat(segment.difficulty_rating)}</td>
+                    <td>
+                        <span class="difficulty-stars" 
+                              data-bs-toggle="tooltip" 
+                              data-bs-html="true"
+                              data-bs-placement="top"
+                              data-difficulty-breakdown='${JSON.stringify(segment.difficulty_breakdown || {})}'
+                              title="${(() => {
+                                  // Debug logging
+                                  console.log('Segment:', segment.segment_name);
+                                  console.log('Breakdown exists:', !!segment.difficulty_breakdown);
+                                  console.log('Full breakdown:', segment.difficulty_breakdown);
+                                  
+                                  // Simple fallback for basic info
+                                  if (!segment.difficulty_breakdown) {
+                                      return `<strong>${segment.segment_name}</strong><br>Difficulty: ${segment.difficulty_rating.toFixed(1)} stars<br><em>Detailed breakdown not available</em>`;
+                                  }
+                                  
+                                  let tooltip = `<strong>${segment.segment_name}</strong><br>`;
+                                  tooltip += `<strong>Difficulty Calculation</strong><br>`;
+                                  tooltip += `Base: ${segment.difficulty_breakdown.base_difficulty ? segment.difficulty_breakdown.base_difficulty.toFixed(1) : '3.0'} stars<br>`;
+                                  
+                                  if (segment.difficulty_breakdown.factors && segment.difficulty_breakdown.factors.length > 0) {
+                                      segment.difficulty_breakdown.factors.forEach(factor => {
+                                          tooltip += `<br><strong>${factor.category || 'Factor'}:</strong><br>`;
+                                          if (factor.details && Array.isArray(factor.details)) {
+                                              factor.details.forEach(detail => {
+                                                  tooltip += `• ${detail}<br>`;
+                                              });
+                                          }
+                                      });
+                                  } else {
+                                      tooltip += '<br><em>Using elevation gain (primary factor), distance, and race position</em>';
+                                  }
+                                  
+                                  tooltip += `<br><strong>Final: ${segment.difficulty_breakdown.difficulty ? segment.difficulty_breakdown.difficulty.toFixed(1) : segment.difficulty_rating.toFixed(1)} ★</strong>`;
+                                  return tooltip;
+                              })()} ">
+                            ${'★'.repeat(Math.round(segment.difficulty_rating))}
+                        </span>
+                    </td>
                     <td>${segment.average_pace.toFixed(1)} min/mi</td>
                     <td>
                         <div class="progress" style="height: 20px;">
@@ -894,12 +1074,32 @@
                             </div>
                         </div>
                     </td>
-                    <td>${segment.elevation_gain > 0 ? '+' + segment.elevation_gain + 'ft' : 'Flat'}</td>
+                    <td>
+                        ${(() => {
+                            const gain = parseFloat(segment.elevation_gain_feet) || 0;
+                            const loss = parseFloat(segment.elevation_loss_feet) || 0;
+                            const net = parseFloat(segment.net_elevation_change_feet) || 0;
+                            
+                            if (gain > 0 || loss > 0) {
+                                return `<small>+${Math.round(gain)}ft / -${Math.round(loss)}ft<br>` +
+                                       `Net: ${net >= 0 ? '+' : ''}${Math.round(net)}ft</small>`;
+                            } else {
+                                return 'Flat';
+                            }
+                        })()}
+                    </td>
                 </tr>
             `).join('');
             
             tbody.innerHTML = html;
+            
+            // Initialize Bootstrap tooltips for difficulty ratings
+            const tooltipTriggerList = [].slice.call(document.querySelectorAll('#segmentTable [data-bs-toggle="tooltip"]'));
+            tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl);
+            });
         }
+
 
         function updateRestPeriodsList(restData) {
             const container = document.getElementById('restPeriodsList');
@@ -1010,23 +1210,36 @@
             criticalContainer.innerHTML = criticalHtml || '<div class="list-group-item">No critical segments identified</div>';
         }
 
-        function createMultiRunnerFatigueChart(analyses) {
+        function createMultiRunnerFatigueChart(analyses, courseSegments) {
             const ctx = document.getElementById('multiRunnerFatigueChart').getContext('2d');
             
-            // Course segments for background shading (same as single runner chart)
-            const segments = [
-                {name: "Phoenix Mountains", start: 0, end: 15.8, color: 'rgba(220, 53, 69, 0.08)'}, // Red (lighter for multi-runner)
-                {name: "Granite to Spur Cross", start: 15.8, end: 24.1, color: 'rgba(255, 193, 7, 0.08)'}, // Yellow
-                {name: "Spur Cross to Maggie's", start: 24.1, end: 43.1, color: 'rgba(40, 167, 69, 0.08)'}, // Green
-                {name: "Maggie's to Javelina", start: 43.1, end: 57.3, color: 'rgba(0, 123, 255, 0.08)'}, // Blue
-                {name: "Javelina to Vulture", start: 57.3, end: 87.2, color: 'rgba(108, 117, 125, 0.08)'}, // Gray
-                {name: "Vulture to Prescott", start: 87.2, end: 115.2, color: 'rgba(220, 53, 69, 0.08)'}, // Red
-                {name: "Prescott to Jerome", start: 115.2, end: 137.4, color: 'rgba(255, 193, 7, 0.08)'}, // Yellow
-                {name: "Jerome to Sedona", start: 137.4, end: 158.6, color: 'rgba(40, 167, 69, 0.08)'}, // Green
-                {name: "Sedona to Mormon Lake", start: 158.6, end: 201.3, color: 'rgba(0, 123, 255, 0.08)'}, // Blue
-                {name: "Mormon Lake to Flagstaff", start: 201.3, end: 238.2, color: 'rgba(108, 117, 125, 0.08)'}, // Gray
-                {name: "Flagstaff Finish", start: 238.2, end: 256.5, color: 'rgba(220, 53, 69, 0.08)'} // Red
-            ];
+            // Use dynamic course segments if provided, otherwise fall back to hardcoded
+            let segments = [];
+            if (courseSegments && courseSegments.length > 0) {
+                // Create segments with two alternating soft colors
+                const colors = [
+                    'rgba(173, 216, 230, 0.1)',   // Light blue (even lighter for multi-runner)
+                    'rgba(221, 221, 221, 0.1)'    // Light gray (even lighter for multi-runner)
+                ];
+                
+                segments = courseSegments.map((segment, index) => ({
+                    name: segment.segment_name,
+                    start: segment.start_mile,
+                    end: segment.end_mile,
+                    color: colors[index % colors.length]
+                }));
+            } else {
+                // Fallback to hardcoded segments with two alternating colors
+                const colors = ['rgba(173, 216, 230, 0.1)', 'rgba(221, 221, 221, 0.1)'];
+                segments = [
+                    {name: "Desert Start to Crown King", start: 0, end: 36.6, color: colors[0]},
+                    {name: "Crown King to Whiskey Row", start: 36.6, end: 77.3, color: colors[1]},
+                    {name: "Whiskey Row to Jerome", start: 77.3, end: 125.3, color: colors[0]},
+                    {name: "Jerome to Sedona Sleep Station", start: 125.3, end: 162.3, color: colors[1]},
+                    {name: "Sedona to Fort Tuthill Sleep", start: 162.3, end: 214.4, color: colors[0]},
+                    {name: "Fort Tuthill to Finish", start: 214.4, end: 256.5, color: colors[1]}
+                ];
+            }
 
             const datasets = selectedRunners.map((runnerId, index) => {
                 const runner = allRunners.find(r => r.id === runnerId);
@@ -1046,33 +1259,35 @@
                 };
             });
 
-            // Aid stations for multi-runner chart (from runner's manual page 16 - 250 Miler)
+            // Use same comprehensive aid station data as single runner chart
             const multiRunnerAidStations = [
-                {name: "Start Line - Deep Canyon Ranch", mile: 0, type: "major_aid", sleep: false},
-                {name: "Cottonwood Creek", mile: 7.4, type: "aid", sleep: false},
-                {name: "Water Station", mile: 10.4, type: "water", sleep: false},
-                {name: "Water Station", mile: 24.6, type: "water", sleep: false},
-                {name: "Lane Mtn by UltrAspire", mile: 32.5, type: "aid", sleep: false},
-                {name: "Crown King by Tailwind", mile: 36.6, type: "aid", sleep: false},
-                {name: "Arrastra Creek", mile: 53, type: "aid", sleep: false},
-                {name: "Kamp Kipa", mile: 62.4, type: "aid", sleep: false},
-                {name: "Camp Wamatochick", mile: 69, type: "aid", sleep: false},
-                {name: "Whiskey Row", mile: 77.3, type: "aid", sleep: false},
-                {name: "Iron King", mile: 90.7, type: "aid", sleep: false},
-                {name: "Fain Ranch by Satisfy Running", mile: 95.9, type: "aid", sleep: false},
-                {name: "Mingus Mountain", mile: 108.3, type: "aid", sleep: false},
-                {name: "Jerome", mile: 125.3, type: "aid", sleep: false},
-                {name: "Dead Horse", mile: 134.0, type: "aid", sleep: false},
-                {name: "Deer Pass", mile: 148.0, type: "aid", sleep: false},
-                {name: "Sedona Posse Grounds", mile: 162.3, type: "major_aid", sleep: true},
-                {name: "Foxboro Ranch", mile: 177.4, type: "aid", sleep: false},
-                {name: "Munds Park", mile: 193.4, type: "aid", sleep: false},
-                {name: "Kelly Canyon", mile: 206.0, type: "aid", sleep: false},
-                {name: "Fort Tuthill", mile: 214.4, type: "major_aid", sleep: true},
-                {name: "Walnut Canyon", mile: 230.5, type: "aid", sleep: false},
-                {name: "Wildcat Hill", mile: 237.3, type: "aid", sleep: false},
-                {name: "Trinity Heights", mile: 252.6, type: "aid", sleep: false},
-                {name: "Finish Line - Heritage Square", mile: 256.5, type: "major_aid", sleep: false}
+                {name: "Deep Canyon Ranch", mile: 0, type: "major_aid", sleep: false, crew: true},
+                {name: "Cottonwood Creek", mile: 7.4, type: "aid", sleep: false, crew: false},
+                {name: "Water Station", mile: 10.4, type: "water", sleep: false, crew: false},
+                {name: "Water Station", mile: 24.6, type: "water", sleep: false, crew: false},
+                {name: "Lane Mtn by UltrAspire", mile: 32.5, type: "aid", sleep: false, crew: false},
+                {name: "Crown King by Tailwind", mile: 36.6, type: "major_aid", sleep: false, crew: true},
+                {name: "Arrastra Creek", mile: 53, type: "aid", sleep: false, crew: false},
+                {name: "Kamp Kipa", mile: 62.4, type: "aid", sleep: true, crew: false},
+                {name: "Camp Wamatochick", mile: 69, type: "aid", sleep: true, crew: false},
+                {name: "Whiskey Row", mile: 77.3, type: "major_aid", sleep: true, crew: true},
+                {name: "Iron King", mile: 90.7, type: "aid", sleep: false, crew: true},
+                {name: "Fain Ranch by Satisfy", mile: 95.9, type: "aid", sleep: false, crew: true},
+                {name: "Mingus Mountain Camp", mile: 108.3, type: "major_aid", sleep: true, crew: true},
+                {name: "Jerome Historic State Park", mile: 125.3, type: "aid", sleep: false, crew: true},
+                {name: "Dead Horse Ranch", mile: 134, type: "major_aid", sleep: true, crew: true},
+                {name: "Deer Pass Trailhead", mile: 148, type: "aid", sleep: false, crew: true},
+                {name: "Water Station", mile: 154.7, type: "water", sleep: false, crew: false},
+                {name: "Sedona Posse Grounds", mile: 162.3, type: "major_aid", sleep: true, crew: true},
+                {name: "Water Station", mile: 173.6, type: "water", sleep: false, crew: false},
+                {name: "Foxboro Ranch", mile: 177.4, type: "aid", sleep: false, crew: true},
+                {name: "Munds Park", mile: 193.4, type: "major_aid", sleep: true, crew: true},
+                {name: "Kelly Canyon", mile: 206, type: "aid", sleep: false, crew: false},
+                {name: "Fort Tuthill", mile: 214.4, type: "major_aid", sleep: true, crew: true},
+                {name: "Walnut Canyon", mile: 230.5, type: "aid", sleep: false, crew: true},
+                {name: "Wildcat Hill", mile: 237.3, type: "aid", sleep: false, crew: true},
+                {name: "Trinity Heights", mile: 252.6, type: "aid", sleep: false, crew: false},
+                {name: "Heritage Square", mile: 256.5, type: "major_aid", sleep: false, crew: true}
             ];
 
             // Define custom plugin for segment backgrounds and aid station markers
@@ -1234,6 +1449,7 @@
                     },
                     scales: {
                         x: {
+                            position: 'bottom',
                             type: 'linear',
                             display: true,
                             title: {
@@ -1242,6 +1458,61 @@
                             },
                             grid: {
                                 color: 'rgba(0, 0, 0, 0.1)'
+                            },
+                            ticks: {
+                                callback: function(value, index, values) {
+                                    // Show mile markers every 25 miles
+                                    if (value % 25 === 0 && value > 0) {
+                                        return Math.round(value);
+                                    } else if (value === 0) {
+                                        return 'Start';
+                                    }
+                                    return '';
+                                },
+                                maxTicksLimit: 15
+                            }
+                        },
+                        xTop: {
+                            position: 'top',
+                            type: 'linear',
+                            display: true,
+                            title: {
+                                display: true,
+                                text: 'Aid Stations',
+                                font: {
+                                    size: 11
+                                }
+                            },
+                            grid: {
+                                display: false
+                            },
+                            min: 0,
+                            max: 260,
+                            afterBuildTicks: function(axis) {
+                                // Force ticks at aid station locations
+                                axis.ticks = multiRunnerAidStations.map(station => ({
+                                    value: station.mile,
+                                    label: station.mile
+                                }));
+                            },
+                            ticks: {
+                                callback: function(value, index, values) {
+                                    // Show aid station names at their exact locations
+                                    const station = multiRunnerAidStations.find(s => Math.abs(s.mile - value) < 0.1);
+                                    
+                                    if (station) {
+                                        const shortName = station.name.length > 15 ? 
+                                            station.name.substring(0, 12) + '...' : station.name;
+                                        const sleepIcon = station.sleep ? ' 🛏️' : '';
+                                        const crewIcon = station.crew ? ' 👥' : '';
+                                        return `${shortName}${sleepIcon}${crewIcon}`;
+                                    }
+                                    return '';
+                                },
+                                font: {
+                                    size: 9
+                                },
+                                color: '#666'
                             }
                         },
                         y: {
@@ -1346,6 +1617,125 @@
                 card.classList.remove('selected');
             });
         }
+
+        // Course Map functionality
+        let courseMap = null;
+        let courseMapData = null;
+
+        function initializeCourseMap() {
+            if (courseMap) {
+                return; // Map already initialized
+            }
+
+            // Show the course map section
+            document.getElementById('courseMapSection').style.display = 'block';
+
+            // Initialize map
+            courseMap = L.map('courseMap').setView([34.5, -111.9], 8);
+
+            // Add OpenStreetMap tile layer
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(courseMap);
+
+            // Load and display course data
+            loadCourseMapData();
+        }
+
+        async function loadCourseMapData() {
+            try {
+                const response = await fetch('/api/course_map_data');
+                courseMapData = await response.json();
+
+                if (courseMapData.error) {
+                    console.error('Course map data error:', courseMapData.error);
+                    return;
+                }
+
+                // Draw course track
+                if (courseMapData.track_points && courseMapData.track_points.length > 0) {
+                    const trackCoordinates = courseMapData.track_points.map(point => [point[0], point[1]]);
+                    
+                    const courseTrack = L.polyline(trackCoordinates, {
+                        color: '#e74c3c',
+                        weight: 4,
+                        opacity: 0.8
+                    }).addTo(courseMap);
+
+                    // Fit map to track bounds
+                    if (courseMapData.bounds) {
+                        courseMap.fitBounds([
+                            [courseMapData.bounds.south, courseMapData.bounds.west],
+                            [courseMapData.bounds.north, courseMapData.bounds.east]
+                        ], { padding: [20, 20] });
+                    }
+                }
+
+                // Add aid station markers
+                if (courseMapData.waypoints && courseMapData.waypoints.length > 0) {
+                    courseMapData.waypoints.forEach(waypoint => {
+                        const isStart = waypoint.name.includes('Start');
+                        const isFinish = waypoint.name.includes('Finish');
+                        
+                        let markerColor = '#3498db'; // Default blue for aid stations
+                        let icon = '🏃';
+                        
+                        if (isStart) {
+                            markerColor = '#27ae60'; // Green for start
+                            icon = '🟢';
+                        } else if (isFinish) {
+                            markerColor = '#e74c3c'; // Red for finish
+                            icon = '🏁';
+                        } else if (waypoint.name.includes('Water Station')) {
+                            markerColor = '#3498db'; // Blue for water stations
+                            icon = '💧';
+                        } else {
+                            icon = '🏕️'; // Tent for aid stations
+                        }
+
+                        const marker = L.circleMarker([waypoint.lat, waypoint.lon], {
+                            radius: isStart || isFinish ? 10 : 8,
+                            fillColor: markerColor,
+                            color: '#fff',
+                            weight: 2,
+                            opacity: 1,
+                            fillOpacity: 0.8
+                        }).addTo(courseMap);
+
+                        // Create popup content
+                        let popupContent = `<div style="font-size: 14px;">
+                            <strong>${icon} ${waypoint.name}</strong><br>`;
+                        
+                        if (waypoint.mile) {
+                            popupContent += `📍 Mile ${waypoint.mile.toFixed(1)}<br>`;
+                        }
+                        
+                        if (waypoint.elevation) {
+                            popupContent += `⛰️ ${waypoint.elevation.toFixed(0)}ft elevation<br>`;
+                        }
+                        
+                        popupContent += `📍 ${waypoint.lat.toFixed(4)}, ${waypoint.lon.toFixed(4)}`;
+                        popupContent += `</div>`;
+
+                        marker.bindPopup(popupContent);
+                    });
+                }
+
+            } catch (error) {
+                console.error('Error loading course map data:', error);
+            }
+        }
+
+        // Override the existing runAnalysis button click to initialize map
+        document.addEventListener('DOMContentLoaded', function() {
+            const runAnalysisBtn = document.getElementById('runAnalysis');
+            if (runAnalysisBtn) {
+                runAnalysisBtn.addEventListener('click', function() {
+                    // Initialize course map when analysis starts
+                    initializeCourseMap();
+                });
+            }
+        });
     </script>
 
     <style>
@@ -1364,6 +1754,24 @@
         .runner-card.selected {
             border-color: #28a745;
             background-color: #f8f9fa;
+        }
+        
+        .difficulty-stars {
+            cursor: help;
+            color: #ffc107;
+            font-weight: bold;
+            transition: color 0.2s ease;
+            text-decoration: none;
+        }
+        
+        .difficulty-stars:hover {
+            color: #ff9800;
+            text-shadow: 0 0 3px rgba(255, 193, 7, 0.5);
+        }
+        
+        /* Left-align tooltip content */
+        .tooltip-inner {
+            text-align: left !important;
         }
         
         .progress {

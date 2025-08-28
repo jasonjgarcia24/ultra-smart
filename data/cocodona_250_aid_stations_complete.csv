@@ -1,0 +1,28 @@
+name,distance_miles,cutoff_time,crew_access,pacer_access,drop_bags,gear_check,sleep_station,has_medic,cutoff_datetime
+Deep Canyon Ranch (Start),0,N/A,Yes,No,Yes,4L Cap,No,No,2025-05-05 05:00:00
+Cottonwood Creek,7.4,5/5/25 9:50 AM,No,No,No,No,No,No,2025-05-05 09:50:00
+Water Station,10.4,N/A,No,No,No,No,No,No,N/A
+Water Station,24.6,N/A,No,No,No,No,No,No,N/A
+Lane Mtn by UltrAspire,32.5,5/5/25 11:20 PM,No,No,No,No,No,Yes,2025-05-05 23:20:00
+Crown King by Tailwind,36.6,5/5/25 11:55 PM,Yes,No,Yes,No,No,Yes,2025-05-05 23:55:00
+Arrastra Creek,53,5/6/25 7:00 AM,No,No,No,Yes,No,No,2025-05-06 07:00:00
+Kamp Kipa,62.4,5/6/25 2:00 PM,No,No,No,No,Yes,No,2025-05-06 14:00:00
+Camp Wamatochick,69,5/6/25 4:45 PM,No,No,Yes,No,Yes,No,2025-05-06 16:45:00
+Whiskey Row,77.3,5/6/25 10:00 PM,Yes,Yes,Yes,No,Yes,Yes,2025-05-06 22:00:00
+Iron King,90.7,5/7/25 3:30 AM,Yes,Yes,No,No,No,No,2025-05-07 03:30:00
+Fain Ranch by Satisfy,95.9,5/7/25 6:00 AM,Yes,Yes,Yes,Yes,No,No,2025-05-07 06:00:00
+Mingus Mountain Camp,108.3,5/7/25 1:00 PM,Yes,Yes,Yes,No,Yes,Yes,2025-05-07 13:00:00
+Jerome Historic State Park,125.3,5/7/25 8:30 PM,Yes,Yes,No,No,No,No,2025-05-07 20:30:00
+Dead Horse Ranch,134,5/8/25 12:00 AM,Yes,Yes,Yes,No,Yes,Yes,2025-05-08 00:00:00
+Deer Pass Trailhead,148,5/8/25 4:45 AM,Yes,Yes,No,No,No,No,2025-05-08 04:45:00
+Water Station,154.7,N/A,No,No,No,No,No,No,N/A
+Sedona Posse Grounds,162.3,5/8/25 12:00 PM,Yes,Yes,Yes,Yes,Yes,Yes,2025-05-08 12:00:00
+Water Station,173.6,N/A,No,No,No,No,No,No,N/A
+Foxboro Ranch,177.4,5/8/25 9:00 PM,Yes,No Pacer Section,Yes,No,No,Yes,2025-05-08 21:00:00
+Munds Park,193.4,5/9/25 2:45 AM,Yes,Yes,Yes,Yes,Yes,Yes,2025-05-09 02:45:00
+Kelly Canyon,206,5/9/25 8:00 AM,No,No,No,No,No,No,2025-05-09 08:00:00
+Fort Tuthill,214.4,5/9/25 12:45 PM,Yes,No Pacer Section,Yes,Yes,Yes,Yes,2025-05-09 12:45:00
+Walnut Canyon,230.5,5/9/25 7:45 PM,Yes,Yes,Yes,No,No,Yes,2025-05-09 19:45:00
+Wildcat Hill,237.3,5/9/25 10:45 PM,Yes,Yes,Yes,Yes,No,No,2025-05-09 22:45:00
+Trinity Heights,252.6,5/10/25 8:15 AM,No,No,No,No,No,No,2025-05-10 08:15:00
+Heritage Square (Finish),256.5,5/10/25 10:00 AM,Yes,Yes,Yes (ALL),No,No,Yes,2025-05-10 10:00:00

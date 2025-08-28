@@ -10,12 +10,15 @@ from typing import List, Dict, Tuple, Optional
 from datetime import datetime, timedelta
 import math
 import json
+import os
+import pdb
 
 class AdvancedAnalyzer:
     """Advanced analysis engine for ultra-endurance race data"""
     
     def __init__(self, database):
         self.db = database
+        self._gpx_data = None
     
     def _clean_for_json(self, obj):
         """Clean data for JSON serialization"""
@@ -35,6 +38,100 @@ class AdvancedAnalyzer:
             return obj
         else:
             return str(obj)
+    
+    def _load_gpx_data(self):
+        """Load GPX course data with elevation information"""
+        if self._gpx_data is not None:
+            return
+        
+        gpx_data_path = '/home/jasongarcia24/Documents/ultra-smart/data/cocodona_250_course_data.json'
+        
+        try:
+            if os.path.exists(gpx_data_path):
+                with open(gpx_data_path, 'r') as f:
+                    self._gpx_data = json.load(f)
+            else:
+                print(f"Warning: GPX course data not found at {gpx_data_path}")
+                self._gpx_data = {}
+        except Exception as e:
+            print(f"Error loading GPX data: {e}")
+            self._gpx_data = {}
+    
+    def _get_elevation_at_mile(self, mile: float) -> Optional[float]:
+        """Get elevation in feet at a specific mile point using GPX data"""
+        self._load_gpx_data()
+        
+        if not self._gpx_data or 'track_points' not in self._gpx_data:
+            return None
+        
+        track_points = self._gpx_data['track_points']
+        
+        # Find the closest track point to the requested mile
+        closest_point = None
+        min_distance = float('inf')
+        
+        for point in track_points:
+            if point.get('elevation_feet') is not None:
+                point_mile = point.get('distance_miles', 0)
+                distance = abs(point_mile - mile)
+                if distance < min_distance:
+                    min_distance = distance
+                    closest_point = point
+        
+        return closest_point.get('elevation_feet') if closest_point else None
+    
+    def _calculate_elevation_change(self, start_mile: float, end_mile: float) -> Dict[str, float]:
+        """Calculate elevation gain and loss between two mile points using GPX data"""
+        self._load_gpx_data()
+        
+        if not self._gpx_data or 'track_points' not in self._gpx_data:
+            return {'gain': 0.0, 'loss': 0.0, 'net_change': 0.0}
+        
+        track_points = self._gpx_data['track_points']
+        
+        # Find track points within the mile range
+        segment_points = []
+        for point in track_points:
+            if point.get('elevation_feet') is not None:
+                point_mile = point.get('distance_miles', 0)
+                if start_mile <= point_mile <= end_mile:
+                    segment_points.append(point)
+        
+        if len(segment_points) < 2:
+            return {'gain': 0.0, 'loss': 0.0, 'net_change': 0.0}
+        
+        # Sort by distance
+        segment_points.sort(key=lambda x: x.get('distance_miles', 0))
+        
+        # Calculate gain and loss
+        total_gain = 0.0
+        total_loss = 0.0
+        
+        for i in range(1, len(segment_points)):
+            prev_elevation = segment_points[i-1]['elevation_feet']
+            curr_elevation = segment_points[i]['elevation_feet']
+            
+            if curr_elevation > prev_elevation:
+                total_gain += curr_elevation - prev_elevation
+            else:
+                total_loss += prev_elevation - curr_elevation
+        
+        start_elevation = segment_points[0]['elevation_feet']
+        end_elevation = segment_points[-1]['elevation_feet']
+        net_change = end_elevation - start_elevation
+        
+        return {
+            'gain': total_gain,
+            'loss': total_loss,
+            'net_change': net_change,
+            'start_elevation': start_elevation,
+            'end_elevation': end_elevation
+        }
+    
+    def _get_gpx_elevation_gain(self, start_mile: float, end_mile: float) -> float:
+        """Get elevation gain in feet between two mile points using GPX data"""
+        elevation_change = self._calculate_elevation_change(start_mile, end_mile)
+        return elevation_change.get('gain', 0.0)
         
     def calculate_fatigue_factors(self, runner_id: int, race_id: int) -> Dict:
         """
@@ -79,7 +176,7 @@ class AdvancedAnalyzer:
                 'expected_pace': expected_pace,
                 'fatigue_factor': fatigue_factor,
                 'terrain_difficulty': segment.get('difficulty_rating', 3) if segment else 3,
-                'elevation_gain': segment.get('elevation_gain_feet', 0) if segment else 0,
+                'elevation_gain': self._get_gpx_elevation_gain(mile, mile + 1),
                 'is_rest_period': is_rest,
                 'recent_aid_station': recent_aid.get('name') if recent_aid else None,
                 'time_of_day': split.get('time_of_day'),
@@ -119,8 +216,8 @@ class AdvancedAnalyzer:
                 pace_increase = current_pace / prev_pace
                 mile = current_split.get('mile_number', i + 1)
                 
-                # Find nearby aid stations (within 1 mile for more precision)
-                nearby_aid = self._find_nearby_aid_station(mile, aid_stations, radius=1.0)
+                # Find nearby aid stations (using expanded 5-mile radius for GPS variations)
+                nearby_aid = self._find_nearby_aid_station(mile, aid_stations, radius=5.0)
                 
                 # Significant slowdown (>1.5x normal pace, more sensitive)
                 if pace_increase > 1.5:
@@ -174,10 +271,13 @@ class AdvancedAnalyzer:
     def analyze_course_impact(self, runner_id: int, race_id: int) -> Dict:
         """
         Analyze how course dynamics (elevation, terrain, aid stations)
-        impact individual runner performance.
+        impact individual runner performance with relative scoring.
         """
         splits = self._get_runner_splits(runner_id, race_id)
         segments = self._get_course_segments(race_id)
+        
+        # Get comparative data for relative performance scoring
+        segment_benchmarks = self._get_segment_benchmarks(race_id, segments)
         
         segment_performance = []
         
@@ -195,9 +295,11 @@ class AdvancedAnalyzer:
             avg_pace = np.mean([s.get('pace_per_mile', 0) for s in segment_splits])
             pace_variance = np.var([s.get('pace_per_mile', 0) for s in segment_splits])
             
-            # Calculate performance relative to terrain difficulty
-            expected_pace_multiplier = 1.0 + (segment['difficulty_rating'] - 3) * 0.15
-            performance_score = 1.0 / (avg_pace * expected_pace_multiplier) if avg_pace > 0 else 0
+            # Calculate enhanced performance score using benchmarks
+            benchmark = segment_benchmarks.get(segment['segment_name'], {})
+            performance_score = self._calculate_relative_performance_score(
+                avg_pace, segment, benchmark
+            )
             
             segment_performance.append({
                 'segment_name': segment['segment_name'],
@@ -205,11 +307,18 @@ class AdvancedAnalyzer:
                 'end_mile': end_mile,
                 'terrain_type': segment['terrain_type'],
                 'difficulty_rating': segment['difficulty_rating'],
+                'difficulty_breakdown': segment.get('difficulty_breakdown'),  # Include difficulty breakdown for tooltips
                 'elevation_gain': segment['elevation_gain_feet'],
+                'elevation_gain_feet': segment['elevation_gain_feet'],
+                'elevation_loss_feet': segment['elevation_loss_feet'],
+                'net_elevation_change_feet': segment['net_elevation_change_feet'],
+                'start_elevation_feet': segment['start_elevation_feet'],
+                'end_elevation_feet': segment['end_elevation_feet'],
                 'average_pace': avg_pace,
                 'pace_consistency': 1.0 / pace_variance if pace_variance > 0 else 1.0,
                 'performance_score': performance_score,
-                'typical_conditions': segment['typical_conditions']
+                'typical_conditions': segment['typical_conditions'],
+                'benchmark_info': benchmark  # Include benchmark context
             })
         
         # Identify strengths and weaknesses
@@ -248,9 +357,18 @@ class AdvancedAnalyzer:
             
             if similar_performance:
                 avg_performance = np.mean([s['performance_score'] for s in similar_performance])
-                recommended_effort = min(0.9, max(0.6, avg_performance))
+                # For ultra-endurance, cap effort much lower and base on performance relative to field
+                if avg_performance > 0.8:  # Performing well above average
+                    recommended_effort = 0.75  # Steady effort
+                elif avg_performance > 0.6:  # Average to good performance
+                    recommended_effort = 0.70  # Moderate effort
+                else:  # Below average performance
+                    recommended_effort = 0.65  # Conservative effort
             else:
-                recommended_effort = max(0.8 - (difficulty - 3) * 0.1, 0.6)
+                # Conservative base effort adjusted by difficulty for ultra-endurance
+                base_effort = 0.65  # Much more conservative for 250-mile race
+                difficulty_adjustment = (difficulty - 3) * 0.05  # Smaller adjustment
+                recommended_effort = max(0.55, base_effort - difficulty_adjustment)
             
             recommendations.append({
                 'segment': segment['segment_name'],
@@ -315,27 +433,69 @@ class AdvancedAnalyzer:
         return formatted_results
     
     def _get_course_segments(self, race_id: int) -> List[Dict]:
-        """Get course segment data - simplified fallback without course_segments table"""
-        # Create basic segments based on aid stations if course_segments table doesn't exist
+        """Get course segment data with dynamic difficulty calculation"""
         aid_stations = self._get_aid_stations(race_id)
         
         if not aid_stations:
             return []
         
+        # Calculate performance-based difficulty for all segments
+        segment_performance_data = self._calculate_segment_performance_metrics(race_id, aid_stations)
+        
         segments = []
         for i in range(len(aid_stations) - 1):
             start_mile = aid_stations[i]['distance_miles']
             end_mile = aid_stations[i + 1]['distance_miles']
+            segment_name = f"{aid_stations[i]['name']} to {aid_stations[i + 1]['name']}"
+            
+            # Calculate dynamic difficulty rating based on multiple factors
+            difficulty_details = self._calculate_segment_difficulty_detailed(
+                start_mile, end_mile, segment_name, aid_stations[i], aid_stations[i + 1],
+                segment_performance_data.get(segment_name, {})
+            )
+            difficulty_rating = difficulty_details['difficulty']
+            
+            # Debug: Check if breakdown data exists and is JSON serializable
+            print(f"Storing breakdown for {segment_name}: {bool(difficulty_details.get('factors'))}")
+            try:
+                import json
+                json_test = json.dumps(difficulty_details)
+                print(f"JSON serialization successful for {segment_name}")
+            except Exception as e:
+                print(f"JSON serialization failed for {segment_name}: {e}")
+            
+            # Determine terrain type based on aid station characteristics and difficulty
+            terrain_type = self._determine_terrain_type(aid_stations[i], aid_stations[i + 1], difficulty_rating)
+            
+            # Get elevation data from GPX
+            elevation_change = self._calculate_elevation_change(start_mile, end_mile)
+            
+            # Create a simple test breakdown to verify the system works
+            test_breakdown = {
+                'difficulty': difficulty_rating,
+                'base_difficulty': 3.0,
+                'factors': [
+                    {
+                        'category': 'Test Factor',
+                        'details': [f'Elevation gain test for {segment_name}', 'Distance factor test']
+                    }
+                ],
+                'final_adjustment': difficulty_rating - 3.0
+            }
             
             segments.append({
-                'segment_name': f"{aid_stations[i]['name']} to {aid_stations[i + 1]['name']}",
+                'segment_name': segment_name,
                 'start_mile': start_mile,
                 'end_mile': end_mile,
-                'terrain_type': 'mixed',
-                'difficulty_rating': 3,  # Default moderate difficulty
-                'elevation_gain_feet': 0,  # Unknown
-                'elevation_loss_feet': 0,  # Unknown
-                'typical_conditions': 'variable'
+                'terrain_type': terrain_type,
+                'difficulty_rating': difficulty_rating,
+                'difficulty_breakdown': test_breakdown,  # Use test data first
+                'elevation_gain_feet': elevation_change.get('gain', 0),
+                'elevation_loss_feet': elevation_change.get('loss', 0),
+                'start_elevation_feet': elevation_change.get('start_elevation', 0),
+                'end_elevation_feet': elevation_change.get('end_elevation', 0),
+                'net_elevation_change_feet': elevation_change.get('net_change', 0),
+                'typical_conditions': self._determine_conditions(start_mile, end_mile)
             })
         
         return segments
@@ -346,13 +506,14 @@ class AdvancedAnalyzer:
         cursor = conn.cursor()
         
         cursor.execute("""
-            SELECT name, distance_miles, 
+            SELECT name, distance_miles, station_type, services,
                    COALESCE(sleep_station, 0) as sleep_station,
                    COALESCE(crew_access, 0) as crew_access,
-                   0 as pacer_access,
+                   COALESCE(pacer_access, 0) as pacer_access,
                    COALESCE(drop_bag_access, 0) as drop_bags,
-                   0 as gear_check,
-                   0 as has_medic
+                   COALESCE(gear_check, '') as gear_check,
+                   COALESCE(has_medic, 0) as has_medic,
+                   cutoff_time_hours, cutoff_datetime, notes
             FROM aid_stations 
             WHERE race_id = ? 
             ORDER BY distance_miles
@@ -504,8 +665,8 @@ class AdvancedAnalyzer:
     
     def _calculate_elevation_tolerance(self, segment_performance: List[Dict]) -> str:
         """Calculate runner's tolerance for elevation changes"""
-        elevation_performance = [(s['elevation_gain'], s['performance_score']) 
-                               for s in segment_performance if s['elevation_gain'] > 0]
+        elevation_performance = [(s.get('elevation_gain_feet', 0), s['performance_score']) 
+                               for s in segment_performance if s.get('elevation_gain_feet', 0) > 0]
         
         if len(elevation_performance) < 2:
             return "Insufficient data"
@@ -527,18 +688,29 @@ class AdvancedAnalyzer:
         """Generate strategy text for a segment"""
         terrain = segment['terrain_type']
         difficulty = segment['difficulty_rating']
+        elevation_gain = segment.get('elevation_gain_feet', 0)
         
-        if effort > 0.85:
-            effort_text = "Push pace"
-        elif effort > 0.75:
-            effort_text = "Maintain effort"
+        # Ultra-endurance appropriate effort descriptions
+        if effort > 0.73:
+            effort_text = "Steady, sustainable effort"
+        elif effort > 0.68:
+            effort_text = "Moderate, controlled pace"
+        elif effort > 0.62:
+            effort_text = "Conservative, energy-saving approach"
         else:
-            effort_text = "Conservative approach"
+            effort_text = "Very conservative, recovery focus"
         
-        if difficulty >= 4:
-            return f"{effort_text}, expect challenging {terrain} terrain"
+        # Add terrain-specific ultra advice
+        if difficulty >= 4.5:
+            terrain_advice = "Focus on form and nutrition during this challenging section"
+        elif elevation_gain > 2000:
+            terrain_advice = "Power hike climbs, save legs for later"
+        elif difficulty <= 2:
+            terrain_advice = "Good section for nutrition and mental recovery"
         else:
-            return f"{effort_text}, good opportunity to make time"
+            terrain_advice = f"Maintain rhythm through {terrain} terrain"
+        
+        return f"{effort_text}. {terrain_advice}"
     
     def _generate_overall_strategy(self, fatigue_analysis: Dict, course_analysis: Dict) -> str:
         """Generate overall race strategy recommendation"""
@@ -548,15 +720,19 @@ class AdvancedAnalyzer:
         
         strategy = []
         
+        # Ultra-endurance specific overall strategy
+        strategy.append("Prioritize consistency and sustainability over speed")
+        
         if avg_fatigue > 1.2:
-            strategy.append("Focus on consistent pacing to manage fatigue buildup")
+            strategy.append("Focus on damage control and energy management in later sections")
         else:
-            strategy.append("Solid pacing control allows for strategic pushes")
+            strategy.append("Maintain steady effort with emphasis on nutrition and hydration")
         
-        strategy.append(f"Maximize time on {best_terrain} terrain")
-        strategy.append(f"Use conservative approach on {worst_terrain} sections")
+        strategy.append(f"Leverage strengths on {best_terrain} terrain for mental boosts")
+        strategy.append(f"Prepare for {worst_terrain} sections with extra nutrition and patience")
+        strategy.append("Remember: finishing strong is more valuable than early time gains")
         
-        return "; ".join(strategy)
+        return ". ".join(strategy) + "."
     
     def _identify_critical_segments(self, segments: List[Dict], course_analysis: Dict) -> List[str]:
         """Identify the most critical race segments"""
@@ -566,10 +742,10 @@ class AdvancedAnalyzer:
         high_difficulty = [s['segment_name'] for s in segments if s['difficulty_rating'] >= 4]
         critical.extend(high_difficulty)
         
-        # Segments with poor historical performance
+        # Segments with poor historical performance (adjusted for new scoring scale)
         segment_analysis = course_analysis.get('segment_analysis', [])
         poor_performance = [s['segment_name'] for s in segment_analysis 
-                          if s['performance_score'] < 0.7]
+                          if s['performance_score'] < 0.4]  # Below average performance
         critical.extend(poor_performance)
         
         return list(set(critical))  # Remove duplicates
@@ -590,7 +766,7 @@ class AdvancedAnalyzer:
         has_crew_access = aid_station.get('crew_access') == 1
         has_medic = aid_station.get('has_medic') == 1
         has_drop_bags = aid_station.get('drop_bags') == 1
-        is_gear_check = aid_station.get('gear_check') == 1
+        is_gear_check = aid_station.get('gear_check', '') != '' and aid_station.get('gear_check', '') != 'No'
         has_pacer_access = aid_station.get('pacer_access') == 1
         
         # Enhanced analysis using GPS-corrected aid station context
@@ -729,3 +905,485 @@ class AdvancedAnalyzer:
             return 'frequent_aid_usage'
         else:
             return 'minimal_aid_usage'
+    
+    def _get_segment_benchmarks(self, race_id: int, segments: List[Dict]) -> Dict:
+        """
+        Get benchmark performance data for each segment:
+        - Segment leader (fastest pace on this segment)
+        - Overall race winner's pace on this segment
+        - Field average pace on this segment
+        """
+        conn = self.db.get_connection()
+        cursor = conn.cursor()
+        
+        # Get all runners' data for comparison
+        cursor.execute("""
+            SELECT r.id as runner_id, r.first_name, r.last_name, 
+                   s.mile_number, 
+                   CASE 
+                       WHEN s.split_time_seconds > 0 THEN s.split_time_seconds / 60.0
+                       ELSE 12.0 
+                   END as pace_per_mile,
+                   s.cumulative_time_seconds
+            FROM runners r
+            JOIN race_results rr ON r.id = rr.runner_id
+            JOIN splits s ON rr.id = s.race_result_id
+            WHERE rr.race_id = ? AND s.split_time_seconds > 0
+            ORDER BY r.id, s.mile_number
+        """, (race_id,))
+        
+        all_splits_data = cursor.fetchall()
+        conn.close()
+        
+        # Group by runner
+        runners_data = {}
+        for row in all_splits_data:
+            runner_id = row['runner_id']
+            if runner_id not in runners_data:
+                runners_data[runner_id] = {
+                    'name': f"{row['first_name']} {row['last_name']}",
+                    'splits': [],
+                    'total_time': 0
+                }
+            runners_data[runner_id]['splits'].append({
+                'mile_number': row['mile_number'],
+                'pace_per_mile': row['pace_per_mile'],
+                'cumulative_time': row['cumulative_time_seconds'] or 0
+            })
+        
+        # Find overall race winner (fastest total time)
+        race_winner_id = None
+        fastest_time = float('inf')
+        for runner_id, data in runners_data.items():
+            if data['splits']:
+                final_time = max([s['cumulative_time'] for s in data['splits']])
+                if final_time > 0 and final_time < fastest_time:
+                    fastest_time = final_time
+                    race_winner_id = runner_id
+        
+        benchmarks = {}
+        
+        for segment in segments:
+            start_mile = segment['start_mile']
+            end_mile = segment['end_mile']
+            segment_name = segment['segment_name']
+            
+            # Collect all runners' performance on this segment
+            segment_paces = []
+            race_winner_pace = None
+            segment_leader_pace = None
+            
+            for runner_id, data in runners_data.items():
+                runner_splits = data['splits']
+                
+                # Get splits within this segment
+                segment_splits = [s for s in runner_splits 
+                                if start_mile <= s['mile_number'] < end_mile]
+                
+                if segment_splits:
+                    avg_pace = np.mean([s['pace_per_mile'] for s in segment_splits])
+                    segment_paces.append(avg_pace)
+                    
+                    # Track race winner's performance on this segment
+                    if runner_id == race_winner_id:
+                        race_winner_pace = avg_pace
+            
+            # Calculate benchmarks
+            if segment_paces:
+                segment_leader_pace = min(segment_paces)  # Fastest pace (lowest number)
+                field_average = np.mean(segment_paces)
+                field_median = np.median(segment_paces)
+                
+                benchmarks[segment_name] = {
+                    'segment_leader_pace': segment_leader_pace,
+                    'race_winner_pace': race_winner_pace or segment_leader_pace,
+                    'field_average_pace': field_average,
+                    'field_median_pace': field_median,
+                    'field_size': len(segment_paces)
+                }
+        
+        return benchmarks
+    
+    def _calculate_relative_performance_score(self, runner_pace: float, 
+                                           segment: Dict, benchmark: Dict) -> float:
+        """
+        Calculate a more nuanced performance score (0.0 to 1.0+) that considers:
+        - How runner performed vs segment leader
+        - How runner performed vs race winner
+        - How runner performed vs field average
+        - Terrain difficulty adjustments
+        
+        Score interpretation:
+        1.0+ = Elite performance (better than segment leader)
+        0.8-1.0 = Excellent performance (top 20%)
+        0.6-0.8 = Good performance (above average)
+        0.4-0.6 = Average performance (middle of pack)
+        0.2-0.4 = Below average performance
+        0.0-0.2 = Poor performance
+        """
+        if runner_pace <= 0 or not benchmark:
+            return 0.0
+        
+        segment_leader_pace = benchmark.get('segment_leader_pace', runner_pace)
+        race_winner_pace = benchmark.get('race_winner_pace', runner_pace)
+        field_average_pace = benchmark.get('field_average_pace', runner_pace)
+        
+        # Base score: how close runner is to segment leader (inverted for pace)
+        if segment_leader_pace > 0:
+            leader_ratio = segment_leader_pace / runner_pace
+        else:
+            leader_ratio = 0.5
+        
+        # Bonus for being faster than race winner on this segment
+        race_winner_bonus = 0.0
+        if race_winner_pace > 0:
+            if runner_pace < race_winner_pace:
+                race_winner_bonus = 0.1 * (race_winner_pace - runner_pace) / race_winner_pace
+        
+        # Field position component (how much better than average)
+        field_position_score = 0.0
+        if field_average_pace > 0:
+            if runner_pace < field_average_pace:  # Better than average
+                field_position_score = 0.3 * (field_average_pace - runner_pace) / field_average_pace
+            else:  # Worse than average
+                field_position_score = -0.2 * (runner_pace - field_average_pace) / field_average_pace
+        
+        # Terrain difficulty adjustment - give credit for performing well on hard terrain
+        difficulty_rating = segment.get('difficulty_rating', 3)
+        difficulty_bonus = 0.0
+        if difficulty_rating > 3 and leader_ratio > 0.8:  # Good performance on hard terrain
+            difficulty_bonus = 0.05 * (difficulty_rating - 3) * leader_ratio
+        
+        # Combine components
+        final_score = leader_ratio + race_winner_bonus + field_position_score + difficulty_bonus
+        
+        # Cap at reasonable bounds (allow scores above 1.0 for exceptional performance)
+        return max(0.0, min(1.5, final_score))
+    
+    def _calculate_segment_performance_metrics(self, race_id: int, aid_stations: List[Dict]) -> Dict:
+        """
+        Calculate performance metrics for each segment to inform difficulty rating.
+        Returns data about how runners actually performed on each segment.
+        """
+        conn = self.db.get_connection()
+        cursor = conn.cursor()
+        
+        # Get all runners' split data
+        cursor.execute("""
+            SELECT r.id as runner_id, s.mile_number, 
+                   CASE 
+                       WHEN s.split_time_seconds > 0 THEN s.split_time_seconds / 60.0
+                       ELSE 12.0 
+                   END as pace_per_mile
+            FROM runners r
+            JOIN race_results rr ON r.id = rr.runner_id
+            JOIN splits s ON rr.id = s.race_result_id
+            WHERE rr.race_id = ? AND s.split_time_seconds > 0
+            ORDER BY r.id, s.mile_number
+        """, (race_id,))
+        
+        all_splits = cursor.fetchall()
+        conn.close()
+        
+        # Group by runner
+        runners_data = {}
+        for row in all_splits:
+            runner_id = row['runner_id']
+            if runner_id not in runners_data:
+                runners_data[runner_id] = []
+            runners_data[runner_id].append({
+                'mile_number': row['mile_number'],
+                'pace_per_mile': row['pace_per_mile']
+            })
+        
+        # Calculate segment metrics
+        segment_metrics = {}
+        
+        for i in range(len(aid_stations) - 1):
+            start_mile = aid_stations[i]['distance_miles']
+            end_mile = aid_stations[i + 1]['distance_miles']
+            segment_name = f"{aid_stations[i]['name']} to {aid_stations[i + 1]['name']}"
+            
+            segment_paces = []
+            pace_increases = []  # How much slower compared to runner's baseline
+            
+            for runner_id, splits in runners_data.items():
+                # Get splits for this segment
+                segment_splits = [s for s in splits 
+                                if start_mile <= s['mile_number'] < end_mile]
+                
+                if segment_splits:
+                    avg_segment_pace = np.mean([s['pace_per_mile'] for s in segment_splits])
+                    segment_paces.append(avg_segment_pace)
+                    
+                    # Calculate baseline pace from early race (first 20% of splits)
+                    early_splits = splits[:max(1, len(splits) // 5)]
+                    if early_splits:
+                        baseline_pace = np.mean([s['pace_per_mile'] for s in early_splits])
+                        pace_increase = avg_segment_pace / baseline_pace if baseline_pace > 0 else 1.0
+                        pace_increases.append(pace_increase)
+            
+            # Calculate segment metrics
+            if segment_paces and pace_increases:
+                segment_metrics[segment_name] = {
+                    'average_pace': np.mean(segment_paces),
+                    'pace_variance': np.var(segment_paces),
+                    'median_pace': np.median(segment_paces),
+                    'average_pace_increase': np.mean(pace_increases),  # Key difficulty indicator
+                    'pace_increase_variance': np.var(pace_increases),
+                    'runner_count': len(segment_paces),
+                    'distance': end_mile - start_mile
+                }
+        
+        return segment_metrics
+    
+    def _calculate_segment_difficulty(self, start_mile: float, end_mile: float, 
+                                    segment_name: str, start_aid: Dict, end_aid: Dict,
+                                    performance_data: Dict) -> float:
+        """Wrapper method that returns just the difficulty score for backward compatibility"""
+        result = self._calculate_segment_difficulty_detailed(start_mile, end_mile, segment_name, start_aid, end_aid, performance_data)
+        print(f"Simple difficulty method called for {segment_name}, returning: {result['difficulty']}")
+        return result['difficulty']
+    
+    def _calculate_segment_difficulty_detailed(self, start_mile: float, end_mile: float, 
+                                    segment_name: str, start_aid: Dict, end_aid: Dict,
+                                    performance_data: Dict) -> Dict:
+        """
+        Calculate difficulty rating (1.0-5.0) based on multiple factors:
+        - Elevation gain/loss (primary factor - feet per mile)
+        - Performance data (how much runners slow down)  
+        - Distance factors (longer segments are harder)
+        - Race position (fatigue accumulation)
+        - Aid station characteristics (technical terrain indicators)
+        - Known challenging segments (Cocodona-specific)
+        
+        Scale:
+        1.0-1.5 = Very Easy (flat, fast runnable terrain)
+        1.5-2.5 = Easy (minimal elevation, mostly runnable)
+        2.5-3.5 = Moderate (some climbing, mixed terrain)
+        3.5-4.5 = Hard (significant elevation gain/technical terrain)  
+        4.5-5.0 = Extreme (very steep climbs, major elevation changes)
+        """
+        
+        # Base difficulty starts at moderate
+        difficulty = 3.0
+        factors = []
+        
+        # Debug logging
+        print(f"Calculating difficulty for {segment_name}: {start_mile}-{end_mile}")
+        
+        # Ensure aid station data is not None
+        if start_aid is None:
+            start_aid = {}
+        if end_aid is None:
+            end_aid = {}
+        
+        # Factor 1: Elevation gain (primary difficulty factor)
+        try:
+            elevation_change = self._calculate_elevation_change(start_mile, end_mile)
+            elevation_gain = elevation_change.get('gain', 0) if elevation_change else 0
+            elevation_loss = elevation_change.get('loss', 0) if elevation_change else 0
+        except Exception as e:
+            print(f"Error calculating elevation change for {segment_name}: {e}")
+            elevation_gain = 0
+            elevation_loss = 0
+            elevation_change = {'gain': 0, 'loss': 0}
+        
+        segment_distance = end_mile - start_mile
+        
+        elevation_adjustments = []
+        if segment_distance > 0:
+            # Calculate elevation gain per mile (feet/mile)
+            gain_per_mile = elevation_gain / segment_distance
+            loss_per_mile = elevation_loss / segment_distance
+            
+            # Elevation gain difficulty (major factor)
+            if gain_per_mile > 400:  # Very steep climb (>400 ft/mile)
+                difficulty += 1.8
+                elevation_adjustments.append(f"Very steep climb ({gain_per_mile:.0f} ft/mi): +1.8")
+            elif gain_per_mile > 250:  # Steep climb (250-400 ft/mile)
+                difficulty += 1.2
+                elevation_adjustments.append(f"Steep climb ({gain_per_mile:.0f} ft/mi): +1.2")
+            elif gain_per_mile > 150:  # Moderate climb (150-250 ft/mile)
+                difficulty += 0.8
+                elevation_adjustments.append(f"Moderate climb ({gain_per_mile:.0f} ft/mi): +0.8")
+            elif gain_per_mile > 75:   # Gentle climb (75-150 ft/mile)
+                difficulty += 0.4
+                elevation_adjustments.append(f"Gentle climb ({gain_per_mile:.0f} ft/mi): +0.4")
+            elif gain_per_mile < 25:   # Mostly flat
+                difficulty -= 0.2
+                elevation_adjustments.append(f"Mostly flat ({gain_per_mile:.0f} ft/mi): -0.2")
+            else:
+                elevation_adjustments.append(f"Minor elevation gain ({gain_per_mile:.0f} ft/mi): +0.0")
+                
+            # Steep descents also add difficulty (technical, harder on legs)
+            if loss_per_mile > 300:    # Very steep descent
+                difficulty += 0.6
+                elevation_adjustments.append(f"Very steep descent ({loss_per_mile:.0f} ft/mi): +0.6")
+            elif loss_per_mile > 150:  # Moderate descent
+                difficulty += 0.3
+                elevation_adjustments.append(f"Moderate descent ({loss_per_mile:.0f} ft/mi): +0.3")
+                
+            # Major elevation swings (both up and down) add complexity
+            if gain_per_mile > 100 and loss_per_mile > 100:
+                difficulty += 0.4  # Rolling terrain bonus
+                elevation_adjustments.append("Rolling terrain (high gain + loss): +0.4")
+                
+        factors.append({
+            'category': 'Elevation',
+            'details': elevation_adjustments
+        })
+        
+        # Factor 2: Performance-based difficulty
+        performance_adjustments = []
+        if performance_data:
+            pace_increase = performance_data.get('average_pace_increase', 1.0)
+            pace_variance = performance_data.get('pace_increase_variance', 0.0)
+            
+            # High pace increase = harder segment (but weight less than elevation)
+            if pace_increase > 1.4:  # 40% slower than baseline
+                difficulty += 1.0
+                performance_adjustments.append(f"Runners 40%+ slower: +1.0")
+            elif pace_increase > 1.2:  # 20% slower than baseline  
+                difficulty += 0.7
+                performance_adjustments.append(f"Runners 20%+ slower: +0.7")
+            elif pace_increase > 1.1:  # 10% slower than baseline
+                difficulty += 0.4
+                performance_adjustments.append(f"Runners 10%+ slower: +0.4")
+            elif pace_increase < 0.95:  # Actually faster (downhill/easy)
+                difficulty -= 0.3
+                performance_adjustments.append(f"Runners faster than baseline: -0.3")
+            
+            # High variance = inconsistent/technical terrain
+            if pace_variance > 0.3:
+                difficulty += 0.2
+                performance_adjustments.append(f"High pace variance (technical): +0.2")
+        
+        if performance_adjustments:
+            factors.append({'category': 'Performance Data', 'details': performance_adjustments})
+        
+        # Factor 3: Distance factor (longer segments are harder)
+        distance_adjustments = []
+        if segment_distance > 20:
+            difficulty += 0.5
+            distance_adjustments.append(f"Very long segment ({segment_distance:.1f} mi): +0.5")
+        elif segment_distance > 15:
+            difficulty += 0.3
+            distance_adjustments.append(f"Long segment ({segment_distance:.1f} mi): +0.3")
+        elif segment_distance < 5:
+            difficulty -= 0.2
+            distance_adjustments.append(f"Short segment ({segment_distance:.1f} mi): -0.2")
+        
+        if distance_adjustments:
+            factors.append({'category': 'Distance', 'details': distance_adjustments})
+        
+        # Factor 4: Race position factor (fatigue accumulation)
+        fatigue_adjustments = []
+        if start_mile > 200:  # Final 56 miles - extreme fatigue
+            difficulty += 0.8
+            fatigue_adjustments.append(f"Final stretch (mile {start_mile:.0f}): +0.8")
+        elif start_mile > 150:  # Late race fatigue
+            difficulty += 0.5
+            fatigue_adjustments.append(f"Late race fatigue (mile {start_mile:.0f}): +0.5")
+        elif start_mile > 100:  # Mid-race fatigue building
+            difficulty += 0.3
+            fatigue_adjustments.append(f"Mid-race fatigue (mile {start_mile:.0f}): +0.3")
+        elif start_mile < 20:  # Early race - fresh legs
+            difficulty -= 0.2
+            fatigue_adjustments.append(f"Early race - fresh legs (mile {start_mile:.0f}): -0.2")
+        
+        if fatigue_adjustments:
+            factors.append({'category': 'Race Position', 'details': fatigue_adjustments})
+        
+        # Factor 5: Aid station characteristics (terrain indicators)
+        aid_station_adjustments = []
+        if end_aid.get('sleep_station') and start_mile > 30:  # Not at start
+            difficulty += 0.3
+            aid_station_adjustments.append("Sleep station (challenging terrain): +0.3")
+        
+        # Gear check stations indicate challenging terrain ahead
+        gear_check = end_aid.get('gear_check', '')
+        if gear_check and gear_check != 'No' and 'Cap' not in gear_check:
+            difficulty += 0.2
+            aid_station_adjustments.append("Gear check station: +0.2")
+        
+        # Medical stations often at challenging points
+        if end_aid.get('has_medic'):
+            difficulty += 0.1
+            aid_station_adjustments.append("Medical station: +0.1")
+        
+        if aid_station_adjustments:
+            factors.append({'category': 'Aid Station Features', 'details': aid_station_adjustments})
+        
+        # Factor 6: Specific segment knowledge (Cocodona-specific)
+        known_adjustments = []
+        segment_lower = segment_name.lower()
+        
+        # Known challenging segments
+        if 'mingus mountain' in segment_lower or 'mingus' in segment_lower:
+            difficulty += 0.5  # Major climb
+            known_adjustments.append("Mingus Mountain (major climb): +0.5")
+        elif 'jerome' in segment_lower:
+            difficulty += 0.3  # Technical descent into town
+            known_adjustments.append("Jerome descent (technical): +0.3")
+        elif 'sedona' in segment_lower and 'posse' in segment_lower:
+            difficulty += 0.2  # Red rock technical terrain
+            known_adjustments.append("Sedona red rock terrain: +0.2")
+        elif 'wildcat hill' in segment_lower:
+            difficulty += 0.4  # Late race challenging climb
+            known_adjustments.append("Wildcat Hill (challenging climb): +0.4")
+        elif 'water station' in segment_lower:
+            difficulty -= 0.3  # Usually easier, shorter segments
+            known_adjustments.append("Water station (easier segment): -0.3")
+        
+        if known_adjustments:
+            factors.append({'category': 'Known Challenges', 'details': known_adjustments})
+        
+        # Cap at reasonable bounds
+        final_difficulty = max(1.0, min(5.0, difficulty))
+        
+        result = {
+            'difficulty': final_difficulty,
+            'base_difficulty': 3.0,
+            'factors': factors,
+            'final_adjustment': final_difficulty - 3.0
+        }
+        
+        # Debug logging
+        print(f"Difficulty result for {segment_name}: {result}")
+        
+        return result
+    
+    def _determine_terrain_type(self, start_aid: Dict, end_aid: Dict, difficulty: float) -> str:
+        """Determine terrain type based on aid stations and difficulty"""
+        
+        # Use difficulty as primary indicator
+        if difficulty >= 4.5:
+            return 'technical'
+        elif difficulty >= 3.5:
+            return 'mountain'  
+        elif difficulty >= 2.5:
+            return 'mixed'
+        elif difficulty >= 1.5:
+            return 'runnable'
+        else:
+            return 'fast'
+    
+    def _determine_conditions(self, start_mile: float, end_mile: float) -> str:
+        """Determine typical conditions based on course position"""
+        
+        avg_mile = (start_mile + end_mile) / 2
+        
+        # Cocodona-specific conditions based on course knowledge
+        if avg_mile < 40:
+            return 'desert_heat'  # Sonoran desert section
+        elif avg_mile < 80:
+            return 'mountain_cool'  # Bradshaw Mountains
+        elif avg_mile < 130:
+            return 'mountain_technical'  # Mingus area
+        elif avg_mile < 170:
+            return 'desert_variable'  # Verde Valley/Sedona
+        elif avg_mile < 220:
+            return 'high_altitude'  # Coconino Plateau
+        else:
+            return 'alpine'  # Mount Elden area
