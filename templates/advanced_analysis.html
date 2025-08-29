@@ -2295,10 +2295,10 @@
                                 <div>
                                     <div class="mb-1">
                                         <i class="${icon}"></i> <strong>Mile ${rest.mile || rest.start_mile}</strong>
-                                        ${rest.nearby_aid_station ? ` - ${rest.nearby_aid_station}` : ''}
+                                        ${rest.nearby_aid_station ? ` ${rest.confidence === 'low' && rest.aid_station_distance > 2.0 ? 'near' : 'at'} ${rest.nearby_aid_station}` : ''}
                                         ${rest.is_sleep_station ? '<span class="badge bg-warning ms-2">Sleep Station</span>' : ''}
                                     </div>
-                                    <small class="text-muted d-block">${rest.likely_reason || 'Rest period detected'}</small>
+                                    <small class="text-muted d-block">${rest.likely_reason ? (rest.confidence === 'low' && rest.aid_station_distance > 2.0 ? rest.likely_reason.replace(' at ', ' near ') : rest.likely_reason) : 'Rest period detected'}</small>
                                     ${rest.aid_services && rest.aid_services.length > 0 ? 
                                         `<small class="text-muted">Services: ${rest.aid_services.join(', ')}</small>` : ''
                                     }
@@ -2413,14 +2413,12 @@
                 
                 // Add hidden groups for "show more" functionality
                 if (restGroups.length > visibleGroups) {
-                    html += `<div class="hidden-rest-groups" style="display: none;">`;
-                    
                     restGroups.slice(visibleGroups).forEach((group, groupIndex) => {
                         const actualGroupIndex = visibleGroups + groupIndex;
                         const avgMile = group.reduce((sum, r) => sum + (r.mile || r.start_mile || 0), 0) / group.length;
                         const nearbyAidStation = group.find(r => r.nearby_aid_station)?.nearby_aid_station || '';
                         
-                        html += `<div class="row mb-3 rest-group" data-group-index="${actualGroupIndex}">`;
+                        html += `<div class="row mb-3 rest-group hidden-rest-group" data-group-index="${actualGroupIndex}" style="display: none;">`;
                         
                         selectedRunners.forEach(runnerId => {
                             // Find the best rest period for this runner prioritizing confidence and slowest pace
@@ -2465,8 +2463,6 @@
                         
                         html += `</div>`;
                     });
-                    
-                    html += `</div>`;
                     
                     // Add show more button
                     html += `
@@ -2828,18 +2824,18 @@
         }
 
         function toggleAllRestGroups(button) {
-            const hiddenContainer = document.querySelector('.hidden-rest-groups');
+            const hiddenGroups = document.querySelectorAll('.hidden-rest-group');
             const icon = button.querySelector('i');
             
-            if (hiddenContainer.style.display === 'none') {
+            if (hiddenGroups.length > 0 && hiddenGroups[0].style.display === 'none') {
                 // Show hidden rest groups
-                hiddenContainer.style.display = 'block';
+                hiddenGroups.forEach(group => group.style.display = 'flex');
                 button.innerHTML = '<i class="fas fa-chevron-up"></i> Show less rest locations';
             } else {
                 // Hide rest groups
-                hiddenContainer.style.display = 'none';
-                const hiddenGroups = hiddenContainer.querySelectorAll('.rest-group').length;
-                button.innerHTML = `<i class="fas fa-chevron-down"></i> Show ${hiddenGroups} more rest locations`;
+                hiddenGroups.forEach(group => group.style.display = 'none');
+                const hiddenCount = hiddenGroups.length;
+                button.innerHTML = `<i class="fas fa-chevron-down"></i> Show ${hiddenCount} more rest locations`;
             }
         }
 
