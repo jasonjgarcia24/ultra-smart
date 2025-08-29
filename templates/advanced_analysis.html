@@ -10,6 +10,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
 <body>
@@ -282,6 +283,52 @@
                         <div class="card">
                             <div class="card-header">
                                 <h5><i class="fas fa-clock"></i> Detected Rest Periods</h5>
+                                
+                                <!-- Rest Period Detection Explanation (Collapsible) -->
+                                <div class="mb-3">
+                                    <button class="btn btn-outline-info btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#restPeriodExplanationSingle" aria-expanded="false" aria-controls="restPeriodExplanationSingle">
+                                        <i class="fas fa-info-circle"></i> Understanding Rest Period Detection
+                                    </button>
+                                </div>
+                                
+                                <div class="collapse mb-4" id="restPeriodExplanationSingle">
+                                    <div class="card border-info">
+                                        <div class="card-body">
+                                            <h6 class="card-title text-info"><i class="fas fa-pause-circle"></i> How Rest Period Detection Works</h6>
+                                            <p class="small mb-3">
+                                                <strong>Rest periods are automatically detected using pace analysis</strong> to identify when runners 
+                                                significantly slow down compared to their surrounding splits.
+                                            </p>
+                                            
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <h6 class="small text-primary"><i class="fas fa-stopwatch"></i> Detection Criteria</h6>
+                                                    <ul class="small mb-3">
+                                                        <li><strong>Primary Threshold:</strong> Pace >50% slower than surrounding splits</li>
+                                                        <li><strong>Context Window:</strong> Analyzes 3 splits before and after current split</li>
+                                                        <li><strong>Aid Station Correlation:</strong> Within 5-mile radius of aid stations</li>
+                                                        <li><strong>Valid Data:</strong> Requires valid pace data for analysis</li>
+                                                    </ul>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <h6 class="small text-primary"><i class="fas fa-calculator"></i> Example Calculation</h6>
+                                                    <ul class="small mb-3">
+                                                        <li>Surrounding splits average: 12 min/mile</li>
+                                                        <li>Threshold for rest period: >18 min/mile (12 × 1.5)</li>
+                                                        <li>25 min/mile split = significant rest period</li>
+                                                        <li>Duration estimated from pace differential</li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="alert alert-light border-0 small">
+                                                <i class="fas fa-lightbulb text-warning"></i> 
+                                                <strong>Note:</strong> The pace chart shows all pace variations, while the cards below 
+                                                show only significant rest periods that meet the 50% threshold and correlate with aid station locations.
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                             <div class="card-body">
                                 <div id="restPeriodsList">
@@ -339,6 +386,7 @@
 
             <!-- Multi-Runner Comparison -->
             <div id="multiRunnerAnalysis" style="display: none;">
+                <!-- Summary Cards Row -->
                 <div class="row mb-4">
                     <div class="col-12">
                         <div class="card">
@@ -349,30 +397,7 @@
                                 </button>
                             </div>
                             <div class="card-body">
-                                <!-- Fatigue comparison chart -->
-                                <div class="mb-4">
-                                    <h6><i class="fas fa-chart-area"></i> Fatigue Progression Comparison</h6>
-                                    <canvas id="multiRunnerFatigueChart" height="100"></canvas>
-                                    
-                                        
-                                        <!-- Aid Station Legend -->
-                                        <div class="mt-3">
-                                            <h6 class="mb-2"><i class="fas fa-first-aid"></i> Aid Stations:</h6>
-                                            <div class="d-flex align-items-center gap-4">
-                                                <div class="d-flex align-items-center">
-                                                    <div style="width: 20px; height: 3px; background-color: #4ecdc4; border-radius: 2px;" class="me-2"></div>
-                                                    <span class="badge bg-light text-dark">🏃 Regular Aid Stations</span>
-                                                </div>
-                                                <div class="d-flex align-items-center">
-                                                    <div style="width: 20px; height: 3px; background-color: #ff6b6b; border-radius: 2px;" class="me-2"></div>
-                                                    <span class="badge bg-light text-dark">🛏️ Sleep Stations (Javelina, Prescott, Sedona, Flagstaff)</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <!-- Performance comparison table -->
+                                <!-- Performance summary table -->
                                 <div class="table-responsive">
                                     <table class="table table-striped" id="multiRunnerTable">
                                         <thead>
@@ -389,6 +414,39 @@
                                             <!-- Multi-runner data will be populated here -->
                                         </tbody>
                                     </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Fatigue Progression Chart -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5><i class="fas fa-chart-line"></i> Fatigue Progression Comparison</h5>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="multiRunnerFatigueChart" height="100"></canvas>
+                                
+                                <!-- Aid Station Legend -->
+                                <div class="mt-3">
+                                    <h6 class="mb-2"><i class="fas fa-first-aid"></i> Aid Stations:</h6>
+                                    <div class="d-flex align-items-center gap-3 flex-wrap">
+                                        <div class="d-flex align-items-center">
+                                            <div style="width: 20px; height: 3px; background-color: #4ecdc4; border-radius: 2px;" class="me-2"></div>
+                                            <span class="badge bg-light text-dark">🏃 Aid Stations</span>
+                                        </div>
+                                        <div class="d-flex align-items-center">
+                                            <div style="width: 20px; height: 3px; background-color: #17a2b8; border-radius: 2px;" class="me-2"></div>
+                                            <span class="badge bg-light text-dark">💧 Water Stations</span>
+                                        </div>
+                                        <div class="d-flex align-items-center">
+                                            <div style="width: 20px; height: 3px; background-color: #ff6b6b; border-radius: 2px;" class="me-2"></div>
+                                            <span class="badge bg-light text-dark">🛏️ Sleep Stations</span>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -623,6 +681,12 @@
             singleDiv.style.display = 'block';
             multiDiv.style.display = 'none';
             
+            // Show single runner summary cards
+            const summaryCards = singleDiv.querySelector('.row .col-12 .card .card-body .row');
+            if (summaryCards) {
+                summaryCards.style.display = 'flex';
+            }
+            
             const runner = allRunners.find(r => r.id === selectedRunners[0]);
             const analysis = data.analyses[selectedRunners[0]];
             
@@ -657,17 +721,33 @@
             const singleDiv = document.getElementById('singleRunnerAnalysis');
             const multiDiv = document.getElementById('multiRunnerAnalysis');
             
-            singleDiv.style.display = 'none';
+            // Show both sections - single contains the main content, multi contains summary
+            singleDiv.style.display = 'block';
             multiDiv.style.display = 'block';
             
-            // Create multi-runner fatigue chart - use segments from first runner's analysis
+            // Update header to show multi-runner mode
+            document.getElementById('analysisRunnerName').textContent = `${selectedRunners.length} Runners - Comparative Analysis`;
+            
+            // Hide individual summary cards and show multi-runner summary instead
+            const summaryCards = singleDiv.querySelector('.row .col-12 .card .card-body .row');
+            if (summaryCards) {
+                summaryCards.style.display = 'none';
+            }
+            
+            // Get course segments from first runner's analysis
             const firstRunnerData = Object.values(data.analyses)[0];
             const courseSegments = firstRunnerData?.course_analysis?.segment_analysis;
-            createMultiRunnerFatigueChart(data.analyses, courseSegments);
             
-            
-            // Update comparison table
+            // Update the multi-runner summary table
             updateMultiRunnerTable(data.analyses);
+            
+            // Create multi-runner fatigue chart in the single-runner chart area
+            createFatigueChartMultiRunner(data.analyses, courseSegments);
+            
+            // Update the single-runner sections with multi-runner data
+            updateSegmentTableMultiRunner(courseSegments, data.analyses);
+            updateRestPeriodsListMultiRunner(data.analyses);
+            updateRecommendationsMultiRunner(data.analyses);
         }
 
         function createFatigueChart(fatigueData, courseSegments) {
@@ -1213,6 +1293,12 @@
         function createMultiRunnerFatigueChart(analyses, courseSegments) {
             const ctx = document.getElementById('multiRunnerFatigueChart').getContext('2d');
             
+            // Validate inputs
+            if (!analyses || Object.keys(analyses).length === 0) {
+                console.error('No analysis data provided for multi-runner chart');
+                return;
+            }
+            
             // Use dynamic course segments if provided, otherwise fall back to hardcoded
             let segments = [];
             if (courseSegments && courseSegments.length > 0) {
@@ -1246,9 +1332,19 @@
                 const analysis = analyses[runnerId];
                 const colors = ['#ff6384', '#36a2eb', '#ffce56', '#4bc0c0', '#9966ff'];
                 
+                // Check if fatigue data exists
+                let fatigueData = [];
+                if (analysis && analysis.fatigue_analysis && analysis.fatigue_analysis.fatigue_progression) {
+                    fatigueData = analysis.fatigue_analysis.fatigue_progression.map(p => ({x: p.mile, y: p.fatigue_factor}));
+                } else {
+                    console.warn(`Missing fatigue data for runner ${runnerId}: ${runner.first_name} ${runner.last_name}`);
+                    // Create empty dataset so chart still renders for other runners
+                    fatigueData = [];
+                }
+                
                 return {
                     label: `${runner.first_name} ${runner.last_name}`,
-                    data: analysis.fatigue_analysis.fatigue_progression.map(p => ({x: p.mile, y: p.fatigue_factor})),
+                    data: fatigueData,
                     borderColor: colors[index % colors.length],
                     backgroundColor: colors[index % colors.length] + '20',
                     tension: 0.1,
@@ -1257,7 +1353,21 @@
                     pointHoverRadius: 5,
                     borderWidth: 2
                 };
-            });
+            }).filter(dataset => dataset.data.length > 0); // Remove empty datasets
+
+            // Check if we have any valid datasets before creating the chart
+            if (datasets.length === 0) {
+                console.error('No valid fatigue data available for multi-runner chart');
+                // Show a message in the chart area
+                ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+                ctx.fillStyle = '#666';
+                ctx.font = '16px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('No fatigue data available for selected runners', ctx.canvas.width / 2, ctx.canvas.height / 2);
+                return;
+            }
+
+            console.log(`Creating multi-runner chart with ${datasets.length} datasets`);
 
             // Use same comprehensive aid station data as single runner chart
             const multiRunnerAidStations = [
@@ -1389,7 +1499,8 @@
                 }
             };
             
-            new Chart(ctx, {
+            try {
+                new Chart(ctx, {
                 type: 'line',
                 plugins: [multiRunnerSegmentPlugin],
                 data: { datasets },
@@ -1528,28 +1639,1041 @@
                     }
                 }
             });
+            } catch (error) {
+                console.error('Error creating multi-runner fatigue chart:', error);
+                // Show error message in chart area
+                ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+                ctx.fillStyle = '#666';
+                ctx.font = '16px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('Error creating chart', ctx.canvas.width / 2, ctx.canvas.height / 2);
+            }
         }
 
         function updateMultiRunnerTable(analyses) {
             const tbody = document.querySelector('#multiRunnerTable tbody');
             
+            if (!tbody) {
+                console.error('Multi-runner table tbody not found');
+                return;
+            }
+            
             const html = selectedRunners.map(runnerId => {
                 const runner = allRunners.find(r => r.id === runnerId);
                 const analysis = analyses[runnerId];
                 
+                if (!runner || !analysis) {
+                    return `
+                        <tr>
+                            <td colspan="6" class="text-center text-muted">Analysis data not available for runner ID ${runnerId}</td>
+                        </tr>
+                    `;
+                }
+                
+                // Safe access to data with fallbacks
+                const avgFatigue = analysis.fatigue_analysis?.average_fatigue?.toFixed(2) || 'N/A';
+                const peakMile = analysis.fatigue_analysis?.peak_fatigue_mile || 'N/A';
+                const restCount = analysis.rest_periods?.rest_periods?.length || analysis.rest_periods?.length || 0;
+                const strongestTerrain = analysis.course_analysis?.strongest_terrain || 'Unknown';
+                const elevationTolerance = analysis.course_analysis?.elevation_tolerance || 'Unknown';
+                
                 return `
                     <tr>
                         <td><strong>${runner.first_name} ${runner.last_name}</strong></td>
-                        <td>${analysis.fatigue_analysis.average_fatigue.toFixed(2)}</td>
-                        <td>${analysis.fatigue_analysis.peak_fatigue_mile}</td>
-                        <td>${analysis.rest_periods.length}</td>
-                        <td><span class="badge bg-success">${analysis.course_analysis.strongest_terrain}</span></td>
-                        <td>${analysis.course_analysis.elevation_tolerance}</td>
+                        <td>${avgFatigue}</td>
+                        <td>${peakMile}</td>
+                        <td>${restCount}</td>
+                        <td><span class="badge bg-success">${strongestTerrain}</span></td>
+                        <td>${elevationTolerance}</td>
                     </tr>
                 `;
             }).join('');
             
             tbody.innerHTML = html;
+        }
+
+        function updateMultiRunnerSegmentTable(analyses, courseSegments) {
+            const tbody = document.querySelector('#multiRunnerSegmentTable tbody');
+            
+            if (!tbody) {
+                console.error('Multi-runner segment table tbody not found');
+                return;
+            }
+            
+            if (!courseSegments || courseSegments.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">No segment data available</td></tr>';
+                return;
+            }
+            
+            if (!analyses || Object.keys(analyses).length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">No analysis data available</td></tr>';
+                return;
+            }
+            
+            // Aggregate segment performance across all runners
+            const segmentStats = courseSegments.map(segment => {
+                const segmentPerformances = [];
+                let bestRunner = null;
+                let worstRunner = null;
+                let bestPace = Infinity;
+                let worstPace = 0;
+                
+                selectedRunners.forEach(runnerId => {
+                    const analysis = analyses[runnerId];
+                    const runner = allRunners.find(r => r.id === runnerId);
+                    
+                    const runnerSegment = analysis?.course_analysis?.segment_analysis?.find(
+                        s => s.segment_name === segment.segment_name
+                    );
+                    
+                    if (runnerSegment && runnerSegment.average_pace) {
+                        segmentPerformances.push(runnerSegment.average_pace);
+                        
+                        if (runnerSegment.average_pace < bestPace) {
+                            bestPace = runnerSegment.average_pace;
+                            bestRunner = runner;
+                        }
+                        if (runnerSegment.average_pace > worstPace) {
+                            worstPace = runnerSegment.average_pace;
+                            worstRunner = runner;
+                        }
+                    }
+                });
+                
+                const avgPace = segmentPerformances.length > 0 ? 
+                    (segmentPerformances.reduce((a, b) => a + b, 0) / segmentPerformances.length) : 0;
+                
+                return {
+                    segment: segment,
+                    avgPace: avgPace,
+                    bestRunner: bestRunner,
+                    bestPace: bestPace !== Infinity ? bestPace : null,
+                    worstRunner: worstRunner,
+                    worstPace: worstPace > 0 ? worstPace : null
+                };
+            });
+            
+            const html = segmentStats.map(stat => {
+                const elevation = stat.segment.elevation_gain_feet;
+                const elevationText = elevation ? `+${elevation.toFixed(0)}ft` : 'N/A';
+                
+                return `
+                    <tr>
+                        <td>${stat.segment.segment_name}</td>
+                        <td>${stat.segment.start_mile.toFixed(1)} - ${stat.segment.end_mile.toFixed(1)}</td>
+                        <td><span class="badge bg-secondary">${stat.segment.terrain_type}</span></td>
+                        <td>
+                            <span class="difficulty-stars" style="color: #ffc107;">
+                                ${'★'.repeat(Math.round(stat.segment.difficulty_rating))}
+                            </span>
+                        </td>
+                        <td>${stat.avgPace > 0 ? stat.avgPace.toFixed(1) + ' min/mi' : 'N/A'}</td>
+                        <td>${stat.bestRunner ? `${stat.bestRunner.first_name} ${stat.bestRunner.last_name} (${stat.bestPace.toFixed(1)})` : 'N/A'}</td>
+                        <td>${stat.worstRunner ? `${stat.worstRunner.first_name} ${stat.worstRunner.last_name} (${stat.worstPace.toFixed(1)})` : 'N/A'}</td>
+                        <td>${elevationText}</td>
+                    </tr>
+                `;
+            }).join('');
+            
+            tbody.innerHTML = html;
+        }
+
+        function updateMultiRunnerRestPeriods(analyses) {
+            const container = document.getElementById('multiRunnerRestPeriods');
+            
+            if (!container) {
+                console.error('Multi-runner rest periods container not found');
+                return;
+            }
+            
+            if (!analyses || Object.keys(analyses).length === 0) {
+                container.innerHTML = '<p class="text-center text-muted">No rest period data available</p>';
+                return;
+            }
+            
+            let html = '<div class="row">';
+            
+            selectedRunners.forEach(runnerId => {
+                const analysis = analyses[runnerId];
+                const runner = allRunners.find(r => r.id === runnerId);
+                const restPeriods = analysis?.rest_periods?.rest_periods || analysis?.rest_periods || [];
+                
+                html += `
+                    <div class="col-md-6 col-lg-4 mb-3">
+                        <div class="card h-100">
+                            <div class="card-header">
+                                <strong>${runner.first_name} ${runner.last_name}</strong>
+                            </div>
+                            <div class="card-body">
+                                ${restPeriods.length === 0 ? 
+                                    '<p class="text-muted small">No significant rest periods detected</p>' :
+                                    restPeriods.slice(0, 3).map(rest => `
+                                        <div class="alert alert-info alert-sm py-2 px-2 mb-2">
+                                            <div class="d-flex justify-content-between">
+                                                <strong>Mile ${rest.start_mile}</strong>
+                                                <small>${rest.duration_minutes.toFixed(0)} min</small>
+                                            </div>
+                                            <small class="text-muted">${rest.location_name || 'Rest stop'}</small>
+                                        </div>
+                                    `).join('') + 
+                                    (restPeriods.length > 3 ? `<small class="text-muted">...and ${restPeriods.length - 3} more</small>` : '')
+                                }
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        function createFatigueChartMultiRunner(analyses, courseSegments) {
+            // Use the single-runner chart canvas but create multi-runner chart
+            const ctx = document.getElementById('fatigueChart').getContext('2d');
+            
+            // Validate inputs
+            if (!analyses || Object.keys(analyses).length === 0) {
+                console.error('No analysis data provided for multi-runner chart');
+                return;
+            }
+            
+            // Clear any existing chart
+            const existingChart = Chart.getChart(ctx);
+            if (existingChart) {
+                existingChart.destroy();
+            }
+            
+            // Create datasets for multiple runners
+            const datasets = selectedRunners.map((runnerId, index) => {
+                const runner = allRunners.find(r => r.id === runnerId);
+                const analysis = analyses[runnerId];
+                const colors = ['#ff6384', '#36a2eb', '#ffce56', '#4bc0c0', '#9966ff'];
+                
+                // Check if fatigue data exists
+                let fatigueData = [];
+                if (analysis && analysis.fatigue_analysis && analysis.fatigue_analysis.fatigue_progression) {
+                    fatigueData = analysis.fatigue_analysis.fatigue_progression.map(p => ({x: p.mile, y: p.fatigue_factor}));
+                }
+                
+                return {
+                    label: `${runner.first_name} ${runner.last_name}`,
+                    data: fatigueData,
+                    borderColor: colors[index % colors.length],
+                    backgroundColor: colors[index % colors.length] + '20',
+                    tension: 0.1,
+                    fill: false,
+                    pointRadius: 2,
+                    pointHoverRadius: 5,
+                    borderWidth: 2
+                };
+            }).filter(dataset => dataset.data.length > 0);
+            
+            if (datasets.length === 0) {
+                ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+                ctx.fillStyle = '#666';
+                ctx.font = '16px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('No fatigue data available for selected runners', ctx.canvas.width / 2, ctx.canvas.height / 2);
+                return;
+            }
+            
+            // Create the chart using Chart.js - reuse the segment background plugin logic
+            new Chart(ctx, {
+                type: 'line',
+                data: { datasets },
+                options: {
+                    responsive: true,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false,
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        tooltip: {
+                            callbacks: {
+                                title: function(context) {
+                                    return `Mile ${context[0].parsed.x}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            type: 'linear',
+                            position: 'bottom',
+                            title: {
+                                display: true,
+                                text: 'Mile'
+                            },
+                            min: 0,
+                            max: 260
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Fatigue Factor'
+                            },
+                            min: 0.8,
+                            max: 2.5
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateSegmentTableMultiRunner(courseSegments, analyses) {
+            // Use the single-runner segment table but populate with multi-runner data
+            const table = document.querySelector('#segmentTable');
+            const thead = table?.querySelector('thead tr');
+            const tbody = table?.querySelector('tbody');
+            
+            if (!table || !thead || !tbody) {
+                console.error('Segment table elements not found');
+                return;
+            }
+            
+            if (!courseSegments || courseSegments.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="${5 + selectedRunners.length + 1}" class="text-center text-muted">No segment data available</td></tr>`;
+                return;
+            }
+            
+            // Update table header to show individual runner performance columns
+            thead.innerHTML = `
+                <th>Segment</th>
+                <th>Miles</th>
+                <th>Terrain</th>
+                <th>Difficulty</th>
+                <th>Avg Pace</th>
+                ${selectedRunners.map(runnerId => {
+                    const runner = allRunners.find(r => r.id === runnerId);
+                    return `<th class="text-center">${runner ? `${runner.first_name} ${runner.last_name}` : `Runner ${runnerId}`}<br><small class="text-muted">Performance</small></th>`;
+                }).join('')}
+                <th>Elevation</th>
+            `;
+            
+            // Create multi-runner segment comparison
+            const html = courseSegments.map(segment => {
+                // Calculate average pace across all runners for this segment
+                const allPaces = [];
+                selectedRunners.forEach(runnerId => {
+                    const analysis = analyses[runnerId];
+                    const runnerSegment = analysis?.course_analysis?.segment_analysis?.find(
+                        s => s.segment_name === segment.segment_name
+                    );
+                    if (runnerSegment && runnerSegment.average_pace > 0) {
+                        allPaces.push(runnerSegment.average_pace);
+                    }
+                });
+                const avgPace = allPaces.length > 0 ? (allPaces.reduce((a, b) => a + b, 0) / allPaces.length) : 0;
+                
+                // Generate individual performance columns for each runner
+                const runnerPerformanceCells = selectedRunners.map(runnerId => {
+                    const analysis = analyses[runnerId];
+                    const runnerSegment = analysis?.course_analysis?.segment_analysis?.find(
+                        s => s.segment_name === segment.segment_name
+                    );
+                    
+                    if (!runnerSegment || !runnerSegment.performance_score) {
+                        return '<td class="text-center text-muted">N/A</td>';
+                    }
+                    
+                    const performanceScore = runnerSegment.performance_score;
+                    const percentage = Math.min(Math.max((performanceScore * 100), 0), 100).toFixed(0);
+                    const color = performanceScore > 0.8 ? 'success' : performanceScore > 0.6 ? 'warning' : 'danger';
+                    
+                    return `
+                        <td class="text-center">
+                            <div class="progress" style="height: 16px; width: 80px; margin: 0 auto;">
+                                <div class="progress-bar bg-${color}" style="width: ${percentage}%">
+                                    <small>${percentage}%</small>
+                                </div>
+                            </div>
+                        </td>
+                    `;
+                }).join('');
+                
+                // Format elevation display to match single-runner format
+                const gain = parseFloat(segment.elevation_gain_feet) || 0;
+                const loss = parseFloat(segment.elevation_loss_feet) || 0;
+                const net = parseFloat(segment.net_elevation_change_feet) || 0;
+                
+                let elevationDisplay;
+                if (gain > 0 || loss > 0) {
+                    elevationDisplay = `<small>+${Math.round(gain)}ft / -${Math.round(loss)}ft<br>` +
+                                     `Net: ${net >= 0 ? '+' : ''}${Math.round(net)}ft</small>`;
+                } else {
+                    elevationDisplay = 'Flat';
+                }
+                
+                return `
+                    <tr>
+                        <td>${segment.segment_name}</td>
+                        <td>${segment.start_mile.toFixed(1)} - ${segment.end_mile.toFixed(1)}</td>
+                        <td><span class="badge bg-secondary">${segment.terrain_type}</span></td>
+                        <td>
+                            <span class="difficulty-stars" style="color: #ffc107;">
+                                ${'★'.repeat(Math.round(segment.difficulty_rating))}
+                            </span>
+                        </td>
+                        <td>${avgPace > 0 ? avgPace.toFixed(1) + ' min/mi' : 'N/A'}</td>
+                        ${runnerPerformanceCells}
+                        <td>${elevationDisplay}</td>
+                    </tr>
+                `;
+            }).join('');
+            
+            tbody.innerHTML = html;
+        }
+
+        function updateRestPeriodsListMultiRunner(analyses) {
+            // Use the single-runner rest periods container but show multi-runner comparison
+            const container = document.getElementById('restPeriodsList');
+            
+            // Function is being called successfully
+            
+            console.log('updateRestPeriodsListMultiRunner called');
+            console.log('Container found:', !!container);
+            console.log('Analyses:', analyses);
+            console.log('Selected runners:', selectedRunners);
+            
+            if (!container) {
+                console.error('Rest periods container not found');
+                return;
+            }
+            
+            if (!analyses || Object.keys(analyses).length === 0) {
+                console.error('No analyses data provided');
+                container.innerHTML = '<div class="text-center text-muted py-4"><p>No analysis data available</p></div>';
+                return;
+            }
+            
+            if (!selectedRunners || selectedRunners.length === 0) {
+                console.error('No selected runners');
+                container.innerHTML = '<div class="text-center text-muted py-4"><p>No runners selected</p></div>';
+                return;
+            }
+            
+            // Create pace vs elevation chart first
+            let html = `
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h6><i class="fas fa-chart-line"></i> Pace vs Distance with Elevation Profile</h6>
+                                <small class="text-muted">Shows pace patterns with detected rest periods and elevation context</small>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="paceElevationChart" height="120"></canvas>
+                                <div class="mt-2">
+                                    <small class="text-muted">
+                                        <i class="fas fa-circle" style="color: rgba(255, 99, 132, 0.8);"></i> Pace (left axis) •
+                                        <i class="fas fa-square" style="color: rgba(75, 192, 192, 0.3);"></i> Elevation (right axis) •
+                                        <i class="fas fa-pause-circle"></i> Rest periods marked as points
+                                    </small>
+                                    <br>
+                                    <small class="text-primary">
+                                        <i class="fas fa-mouse-pointer"></i> <strong>Interactive:</strong> 
+                                        Drag to pan • Scroll wheel to zoom • Double-click to reset view
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-12">
+                        <h6><i class="fas fa-list"></i> Detailed Rest Period Breakdown</h6>
+                        
+                        <!-- Rest Period Detection Explanation (Collapsible) -->
+                        <div class="mb-3">
+                            <button class="btn btn-outline-info btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#restPeriodExplanation" aria-expanded="false" aria-controls="restPeriodExplanation">
+                                <i class="fas fa-info-circle"></i> Understanding Rest Period Detection
+                            </button>
+                        </div>
+                        
+                        <div class="collapse mb-4" id="restPeriodExplanation">
+                            <div class="card border-info">
+                                <div class="card-body">
+                                    <h6 class="card-title text-info"><i class="fas fa-pause-circle"></i> How Rest Period Detection Works</h6>
+                                    <p class="small mb-3">
+                                        <strong>Rest periods are automatically detected using pace analysis</strong> to identify when runners 
+                                        significantly slow down compared to their surrounding splits.
+                                    </p>
+                                    
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <h6 class="small text-primary"><i class="fas fa-stopwatch"></i> Detection Criteria</h6>
+                                            <ul class="small mb-3">
+                                                <li><strong>Primary Threshold:</strong> Pace >50% slower than surrounding splits</li>
+                                                <li><strong>Context Window:</strong> Analyzes 3 splits before and after current split</li>
+                                                <li><strong>Aid Station Correlation:</strong> Within 5-mile radius of aid stations</li>
+                                                <li><strong>Valid Data:</strong> Requires valid pace data for analysis</li>
+                                            </ul>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <h6 class="small text-primary"><i class="fas fa-calculator"></i> Example Calculation</h6>
+                                            <ul class="small mb-3">
+                                                <li>Surrounding splits average: 12 min/mile</li>
+                                                <li>Threshold for rest period: >18 min/mile (12 × 1.5)</li>
+                                                <li>25 min/mile split = significant rest period</li>
+                                                <li>Duration estimated from pace differential</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="alert alert-light border-0 small">
+                                        <i class="fas fa-lightbulb text-warning"></i> 
+                                        <strong>Note:</strong> The pace chart shows all pace variations, while the cards below 
+                                        show only significant rest periods that meet the 50% threshold and correlate with aid station locations.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+            `;
+            
+            selectedRunners.forEach(runnerId => {
+                const analysis = analyses[runnerId];
+                const runner = allRunners.find(r => r.id === runnerId);
+                const allRestPeriods = analysis?.rest_periods?.rest_periods || analysis?.rest_periods || [];
+                
+                // Apply same filtering as chart - only rest periods with location data
+                const restPeriods = allRestPeriods.filter(rest => rest.mile || rest.start_mile);
+                
+                console.log(`Runner ${runnerId} (${runner?.first_name}):`, {
+                    hasAnalysis: !!analysis,
+                    allRestPeriods: allRestPeriods.length,
+                    filteredRestPeriods: restPeriods.length,
+                    restPeriodsArray: restPeriods
+                });
+                
+                html += `
+                    <div class="col-md-${selectedRunners.length === 1 ? '12' : selectedRunners.length === 2 ? '6' : '4'} mb-3">
+                        <div class="card h-100">
+                            <div class="card-header">
+                                <h6 class="mb-0"><i class="fas fa-user"></i> ${runner.first_name} ${runner.last_name}</h6>
+                                ${restPeriods.length > 0 ? `<small class="text-muted">${restPeriods.length} rest period${restPeriods.length === 1 ? '' : 's'} detected</small>` : ''}
+                            </div>
+                            <div class="card-body">
+                                ${restPeriods.length === 0 ? 
+                                    '<p class="text-muted">No significant rest periods detected.</p>' :
+                                    `<div class="rest-periods-container" data-runner-id="${runnerId}">
+                                        ${restPeriods.slice(0, 3).map(rest => {
+                                            const isCrewRest = rest.rest_type?.startsWith('crew');
+                                            const alertClass = rest.is_sleep_station ? 'alert-warning' : 
+                                                             isCrewRest ? 'alert-primary' :
+                                                             rest.rest_type === 'medical' ? 'alert-danger' : 'alert-info';
+                                            const icon = rest.is_sleep_station ? 'fas fa-bed' :
+                                                       isCrewRest ? 'fas fa-users' :
+                                                       rest.rest_type === 'medical' ? 'fas fa-medkit' :
+                                                       rest.rest_type === 'resupply' ? 'fas fa-box' : 'fas fa-clock';
+                                            
+                                            return `
+                                                <div class="alert ${alertClass}">
+                                                    <div class="d-flex justify-content-between align-items-start">
+                                                        <div>
+                                                            <div class="mb-1">
+                                                                <i class="${icon}"></i> <strong>Mile ${rest.mile || rest.start_mile}</strong>
+                                                                ${rest.nearby_aid_station ? ` - ${rest.nearby_aid_station}` : ''}
+                                                                ${rest.is_sleep_station ? '<span class="badge bg-warning ms-2">Sleep Station</span>' : ''}
+                                                            </div>
+                                                            <small class="text-muted d-block">${rest.likely_reason || 'Rest period detected'}</small>
+                                                            ${rest.aid_services && rest.aid_services.length > 0 ? 
+                                                                `<small class="text-muted">Services: ${rest.aid_services.join(', ')}</small>` : ''
+                                                            }
+                                                        </div>
+                                                        <div class="text-end">
+                                                            <div><small><strong>${rest.estimated_rest_minutes ? rest.estimated_rest_minutes.toFixed(1) : rest.duration_minutes ? rest.duration_minutes.toFixed(0) : 'N/A'} min</strong> rest</small></div>
+                                                            ${rest.pace_ratio ? `<div><small class="text-muted">${rest.pace_ratio.toFixed(1)}x slower</small></div>` : ''}
+                                                            <small class="badge bg-secondary">${rest.confidence || 'medium'} confidence</small>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            `;
+                                        }).join('')}
+                                        <div class="hidden-rest-periods" style="display: none;">
+                                            ${restPeriods.slice(3).map(rest => {
+                                                const isCrewRest = rest.rest_type?.startsWith('crew');
+                                                const alertClass = rest.is_sleep_station ? 'alert-warning' : 
+                                                                 isCrewRest ? 'alert-primary' :
+                                                                 rest.rest_type === 'medical' ? 'alert-danger' : 'alert-info';
+                                                const icon = rest.is_sleep_station ? 'fas fa-bed' :
+                                                           isCrewRest ? 'fas fa-users' :
+                                                           rest.rest_type === 'medical' ? 'fas fa-medkit' :
+                                                           rest.rest_type === 'resupply' ? 'fas fa-box' : 'fas fa-clock';
+                                                
+                                                return `
+                                                    <div class="alert ${alertClass}">
+                                                        <div class="d-flex justify-content-between align-items-start">
+                                                            <div>
+                                                                <div class="mb-1">
+                                                                    <i class="${icon}"></i> <strong>Mile ${rest.mile || rest.start_mile}</strong>
+                                                                    ${rest.nearby_aid_station ? ` - ${rest.nearby_aid_station}` : ''}
+                                                                    ${rest.is_sleep_station ? '<span class="badge bg-warning ms-2">Sleep Station</span>' : ''}
+                                                                </div>
+                                                                <small class="text-muted d-block">${rest.likely_reason || 'Rest period detected'}</small>
+                                                                ${rest.aid_services && rest.aid_services.length > 0 ? 
+                                                                    `<small class="text-muted">Services: ${rest.aid_services.join(', ')}</small>` : ''
+                                                                }
+                                                            </div>
+                                                            <div class="text-end">
+                                                                <div><small><strong>${rest.estimated_rest_minutes ? rest.estimated_rest_minutes.toFixed(1) : rest.duration_minutes ? rest.duration_minutes.toFixed(0) : 'N/A'} min</strong> rest</small></div>
+                                                                ${rest.pace_ratio ? `<div><small class="text-muted">${rest.pace_ratio.toFixed(1)}x slower</small></div>` : ''}
+                                                                <small class="badge bg-secondary">${rest.confidence || 'medium'} confidence</small>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                `;
+                                            }).join('')}
+                                        </div>
+                                        ${restPeriods.length > 3 ? 
+                                            `<div class="text-center">
+                                                <button class="btn btn-sm btn-outline-secondary show-more-btn" onclick="toggleRestPeriods('${runnerId}', this)">
+                                                    <i class="fas fa-chevron-down"></i> Show ${restPeriods.length - 3} more
+                                                </button>
+                                            </div>` : ''
+                                        }
+                                    </div>`
+                                }
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+            
+            // If no content was generated, show a message
+            if (html === '<div class="row"></div>') {
+                html = '<div class="text-center text-muted py-4"><p>No rest period data available for selected runners</p></div>';
+            }
+            
+            console.log('Final HTML length:', html.length);
+            console.log('Setting container innerHTML');
+            container.innerHTML = html;
+            console.log('Container innerHTML set. Current content length:', container.innerHTML.length);
+            
+            // Create the pace vs elevation chart
+            createPaceElevationChart(analyses);
+        }
+
+        function createPaceElevationChart(analyses) {
+            const canvas = document.getElementById('paceElevationChart');
+            if (!canvas) {
+                console.error('Pace elevation chart canvas not found');
+                return;
+            }
+
+            const ctx = canvas.getContext('2d');
+            
+            // Clear any existing chart
+            const existingChart = Chart.getChart(ctx);
+            if (existingChart) {
+                existingChart.destroy();
+            }
+
+            // Colors for runners
+            const runnerColors = ['#ff6384', '#36a2eb', '#ffce56', '#4bc0c0', '#9966ff'];
+            
+            // Build datasets for each runner's pace data
+            const paceDatasets = [];
+            const restPeriodDatasets = [];
+            
+            selectedRunners.forEach((runnerId, index) => {
+                const analysis = analyses[runnerId];
+                const runner = allRunners.find(r => r.id === runnerId);
+                const color = runnerColors[index % runnerColors.length];
+                
+                if (!analysis || !analysis.fatigue_analysis || !analysis.fatigue_analysis.fatigue_progression) {
+                    return;
+                }
+                
+                // Extract pace data from fatigue progression (fatigue factor * base pace estimate)
+                const paceData = analysis.fatigue_analysis.fatigue_progression.map(point => ({
+                    x: point.mile,
+                    y: point.fatigue_factor * 12 // Approximate base pace of 12 min/mile
+                }));
+                
+                paceDatasets.push({
+                    label: `${runner.first_name} ${runner.last_name} Pace`,
+                    data: paceData,
+                    borderColor: color,
+                    backgroundColor: color + '20',
+                    borderWidth: 2,
+                    fill: false,
+                    tension: 0.1,
+                    pointRadius: 0,
+                    pointHoverRadius: 4,
+                    yAxisID: 'paceAxis'
+                });
+                
+                // Add rest period markers
+                const restPeriods = analysis?.rest_periods?.rest_periods || analysis?.rest_periods || [];
+                if (restPeriods.length > 0) {
+                    const restMarkers = restPeriods
+                        .filter(rest => rest.mile || rest.start_mile)
+                        .map(rest => ({
+                            x: rest.mile || rest.start_mile,
+                            y: (rest.estimated_rest_minutes || rest.duration_minutes || 0) + 10 // Offset above pace line
+                        }));
+                    
+                    restPeriodDatasets.push({
+                        label: `${runner.first_name} Rest Periods`,
+                        data: restMarkers,
+                        backgroundColor: color,
+                        borderColor: color,
+                        pointRadius: 6,
+                        pointStyle: 'circle',
+                        showLine: false,
+                        yAxisID: 'paceAxis'
+                    });
+                }
+            });
+
+            // Get elevation data from course segments or GPX data
+            let elevationData = [];
+            
+            // Try to get elevation from first runner's course analysis
+            const firstRunnerData = Object.values(analyses)[0];
+            if (firstRunnerData?.course_analysis?.segment_analysis) {
+                // Create elevation profile from segment data
+                firstRunnerData.course_analysis.segment_analysis.forEach(segment => {
+                    elevationData.push(
+                        { x: segment.start_mile, y: segment.start_elevation_feet || 3000 },
+                        { x: segment.end_mile, y: segment.end_elevation_feet || 3000 }
+                    );
+                });
+            }
+            
+            // If no segment elevation data, create a simple elevation profile
+            if (elevationData.length === 0) {
+                // Basic elevation profile for Cocodona 250
+                elevationData = [
+                    { x: 0, y: 2000 }, { x: 30, y: 4500 }, { x: 60, y: 5000 },
+                    { x: 90, y: 6000 }, { x: 120, y: 4000 }, { x: 150, y: 5500 },
+                    { x: 180, y: 6500 }, { x: 210, y: 7000 }, { x: 256, y: 7000 }
+                ];
+            }
+
+            const elevationDataset = {
+                label: 'Elevation Profile',
+                data: elevationData,
+                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                borderColor: 'rgba(75, 192, 192, 0.5)',
+                borderWidth: 1,
+                fill: true,
+                tension: 0.4,
+                pointRadius: 0,
+                yAxisID: 'elevationAxis'
+            };
+
+            // Create the chart
+            const chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    datasets: [elevationDataset, ...paceDatasets, ...restPeriodDatasets]
+                },
+                options: {
+                    responsive: true,
+                    interaction: {
+                        mode: 'nearest',
+                        axis: 'x',
+                        intersect: false,
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: {
+                                filter: function(item) {
+                                    // Only show pace lines and elevation in legend
+                                    return !item.text.includes('Rest Periods');
+                                }
+                            }
+                        },
+                        tooltip: {
+                            mode: 'nearest',
+                            callbacks: {
+                                title: function(tooltipItems) {
+                                    if (tooltipItems.length > 0) {
+                                        const xValue = tooltipItems[0].parsed.x;
+                                        return `Mile ${xValue.toFixed(1)}`;
+                                    }
+                                    return '';
+                                },
+                                label: function(context) {
+                                    const xValue = context.parsed.x;
+                                    const yValue = context.parsed.y;
+                                    
+                                    if (context.dataset.yAxisID === 'elevationAxis') {
+                                        return `Elevation: ${Math.round(yValue)}ft`;
+                                    } else if (context.dataset.label.includes('Rest Periods')) {
+                                        return `Rest period: ${Math.round(yValue - 10)} minutes`;
+                                    } else {
+                                        return `${context.dataset.label}: ${yValue.toFixed(1)} min/mi`;
+                                    }
+                                },
+                                filter: function(tooltipItem) {
+                                    // Only show tooltip for the closest dataset
+                                    return true;
+                                }
+                            }
+                        },
+                        zoom: {
+                            zoom: {
+                                wheel: {
+                                    enabled: true,
+                                },
+                                pinch: {
+                                    enabled: true
+                                },
+                                mode: 'xy',
+                                scaleMode: 'xy'
+                            },
+                            pan: {
+                                enabled: true,
+                                mode: 'xy',
+                                modifierKey: null
+                            },
+                            limits: {
+                                x: {min: 0, max: 300},
+                                paceAxis: {min: 5, max: 60},
+                                elevationAxis: {min: 1000, max: 10000}
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            type: 'linear',
+                            position: 'bottom',
+                            title: {
+                                display: true,
+                                text: 'Distance (miles)'
+                            },
+                            ticks: {
+                                callback: function(value, index, values) {
+                                    if (value % 25 === 0 && value > 0) return `Mile ${Math.round(value)}`;
+                                    else if (value === 0) return 'Start';
+                                    return '';
+                                }
+                            },
+                            min: 0,
+                            max: 260
+                        },
+                        xTop: {
+                            type: 'linear',
+                            position: 'top',
+                            title: {
+                                display: false
+                            },
+                            grid: {
+                                drawOnChartArea: false,
+                            },
+                            afterBuildTicks: function(axis) {
+                                // Use the aid stations from the CSV data
+                                const aidStations = [
+                                    {mile: 0, name: "Start"}, {mile: 7.4, name: "Cottonwood"}, {mile: 32.5, name: "Lane Mtn"},
+                                    {mile: 36.6, name: "Crown King"}, {mile: 53, name: "Arrastra"}, {mile: 62.4, name: "Kamp Kipa"},
+                                    {mile: 69, name: "Wamatochick"}, {mile: 77.3, name: "Whiskey Row"}, {mile: 90.7, name: "Iron King"},
+                                    {mile: 95.9, name: "Fain Ranch"}, {mile: 108.3, name: "Mingus Mtn"}, {mile: 125.3, name: "Jerome"},
+                                    {mile: 134, name: "Dead Horse"}, {mile: 148, name: "Deer Pass"}, {mile: 162.3, name: "Sedona"},
+                                    {mile: 177.4, name: "Foxboro"}, {mile: 193.4, name: "Munds Park"}, {mile: 206, name: "Kelly Canyon"},
+                                    {mile: 214.4, name: "Fort Tuthill"}, {mile: 230.5, name: "Walnut Canyon"}, {mile: 237.3, name: "Wildcat Hill"},
+                                    {mile: 252.6, name: "Trinity Heights"}, {mile: 256.5, name: "Finish"}
+                                ];
+                                
+                                axis.ticks = aidStations.map(station => ({
+                                    value: station.mile,
+                                    label: station.mile
+                                }));
+                            },
+                            ticks: {
+                                callback: function(value, index, values) {
+                                    // Find the aid station name for this mile
+                                    const aidStations = [
+                                        {mile: 0, name: "Start"}, {mile: 7.4, name: "Cottonwood"}, {mile: 32.5, name: "Lane Mtn"},
+                                        {mile: 36.6, name: "Crown King"}, {mile: 53, name: "Arrastra"}, {mile: 62.4, name: "Kamp Kipa"},
+                                        {mile: 69, name: "Wamatochick"}, {mile: 77.3, name: "Whiskey Row"}, {mile: 90.7, name: "Iron King"},
+                                        {mile: 95.9, name: "Fain Ranch"}, {mile: 108.3, name: "Mingus Mtn"}, {mile: 125.3, name: "Jerome"},
+                                        {mile: 134, name: "Dead Horse"}, {mile: 148, name: "Deer Pass"}, {mile: 162.3, name: "Sedona"},
+                                        {mile: 177.4, name: "Foxboro"}, {mile: 193.4, name: "Munds Park"}, {mile: 206, name: "Kelly Canyon"},
+                                        {mile: 214.4, name: "Fort Tuthill"}, {mile: 230.5, name: "Walnut Canyon"}, {mile: 237.3, name: "Wildcat Hill"},
+                                        {mile: 252.6, name: "Trinity Heights"}, {mile: 256.5, name: "Finish"}
+                                    ];
+                                    const station = aidStations.find(s => Math.abs(s.mile - value) < 0.5);
+                                    return station ? station.name : '';
+                                },
+                                maxRotation: 45,
+                                minRotation: 45
+                            },
+                            min: 0,
+                            max: 260
+                        },
+                        paceAxis: {
+                            type: 'linear',
+                            position: 'left',
+                            title: {
+                                display: true,
+                                text: 'Pace (min/mile)'
+                            },
+                            min: 8,
+                            max: 40,
+                            suggestedMin: 8,
+                            suggestedMax: 25
+                        },
+                        elevationAxis: {
+                            type: 'linear',
+                            position: 'right',
+                            title: {
+                                display: true,
+                                text: 'Elevation (feet)'
+                            },
+                            grid: {
+                                drawOnChartArea: false,
+                            },
+                            min: 2000,
+                            max: 7500
+                        }
+                    }
+                }
+            });
+            
+            // Add double-click to reset zoom functionality
+            canvas.addEventListener('dblclick', function() {
+                chart.resetZoom();
+            });
+        }
+
+        function toggleRestPeriods(runnerId, button) {
+            const hiddenContainer = document.querySelector(`[data-runner-id="${runnerId}"] .hidden-rest-periods`);
+            const icon = button.querySelector('i');
+            
+            if (hiddenContainer.style.display === 'none') {
+                // Show hidden rest periods
+                hiddenContainer.style.display = 'block';
+                button.innerHTML = '<i class="fas fa-chevron-up"></i> Show less';
+                icon.classList.remove('fa-chevron-down');
+                icon.classList.add('fa-chevron-up');
+            } else {
+                // Hide rest periods
+                hiddenContainer.style.display = 'none';
+                const hiddenCount = hiddenContainer.children.length;
+                button.innerHTML = `<i class="fas fa-chevron-down"></i> Show ${hiddenCount} more rest periods`;
+            }
+        }
+
+
+        function updateRecommendationsMultiRunner(analyses) {
+            // Use the single-runner recommendations section but show multi-runner comparison
+            
+            // Overall strategy
+            const overallContainer = document.getElementById('overallStrategy');
+            if (overallContainer) {
+                overallContainer.textContent = "Multi-runner comparison mode - individual strategies shown below";
+            }
+            
+            // Segment recommendations table
+            const tbody = document.querySelector('#recommendationsTable tbody');
+            if (tbody) {
+                tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">Individual recommendations vary by runner - see summary table above</td></tr>';
+            }
+            
+            // Critical segments
+            const criticalContainer = document.getElementById('criticalSegments');
+            if (criticalContainer) {
+                // Find common critical segments across all runners
+                const allCritical = selectedRunners.flatMap(runnerId => {
+                    const analysis = analyses[runnerId];
+                    return analysis?.recommendations?.critical_segments || [];
+                });
+                
+                // Count frequency of each segment
+                const segmentCounts = {};
+                allCritical.forEach(segment => {
+                    segmentCounts[segment] = (segmentCounts[segment] || 0) + 1;
+                });
+                
+                // Show segments mentioned by multiple runners
+                const commonSegments = Object.entries(segmentCounts)
+                    .filter(([segment, count]) => count > 1)
+                    .sort(([,a], [,b]) => b - a)
+                    .slice(0, 5);
+                
+                if (commonSegments.length > 0) {
+                    const html = commonSegments.map(([segment, count]) => `
+                        <div class="list-group-item list-group-item-warning">
+                            <strong>${segment}</strong>
+                            <small class="text-muted d-block">Critical for ${count} of ${selectedRunners.length} runners</small>
+                        </div>
+                    `).join('');
+                    criticalContainer.innerHTML = html;
+                } else {
+                    criticalContainer.innerHTML = '<div class="list-group-item">No common critical segments identified</div>';
+                }
+            }
+        }
+
+        function updateMultiRunnerRecommendations(analyses) {
+            const container = document.getElementById('multiRunnerRecommendations');
+            
+            if (!container) {
+                console.error('Multi-runner recommendations container not found');
+                return;
+            }
+            
+            if (!analyses || Object.keys(analyses).length === 0) {
+                container.innerHTML = '<p class="text-center text-muted">No strategy recommendations available</p>';
+                return;
+            }
+            
+            // Find common recommendations across runners
+            const allRecommendations = selectedRunners.map(runnerId => {
+                const analysis = analyses[runnerId];
+                const runner = allRunners.find(r => r.id === runnerId);
+                return {
+                    runner: runner,
+                    recommendations: analysis?.recommendations || {}
+                };
+            });
+            
+            let html = '<div class="row mb-4">';
+            
+            // Overall strategy comparison
+            html += '<div class="col-12"><h6>Overall Strategy Comparison</h6></div>';
+            allRecommendations.forEach(rec => {
+                html += `
+                    <div class="col-md-6 mb-3">
+                        <div class="alert alert-primary">
+                            <strong>${rec.runner.first_name} ${rec.runner.last_name}:</strong><br>
+                            <small>${rec.recommendations.overall_strategy || 'No strategy recommendations available'}</small>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+            
+            // Critical segments comparison
+            if (allRecommendations[0]?.recommendations?.critical_segments) {
+                html += `
+                    <div class="row">
+                        <div class="col-12">
+                            <h6>Common Critical Segments</h6>
+                            <div class="alert alert-warning">
+                                <strong>Focus Areas for All Runners:</strong><br>
+                                ${allRecommendations[0].recommendations.critical_segments.slice(0, 5).join(', ')}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            container.innerHTML = html;
         }
 
         function collapseRunnerSelection() {

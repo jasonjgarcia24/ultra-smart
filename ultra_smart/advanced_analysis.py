@@ -219,8 +219,9 @@ class AdvancedAnalyzer:
                 # Find nearby aid stations (using expanded 5-mile radius for GPS variations)
                 nearby_aid = self._find_nearby_aid_station(mile, aid_stations, radius=5.0)
                 
-                # Significant slowdown (>1.5x normal pace, more sensitive)
-                if pace_increase > 1.5:
+                # Make detection more sensitive - lower threshold from 1.5x to 1.3x
+                # Also detect extremely slow paces (>35 min/mile) regardless of previous pace
+                if pace_increase > 1.3 or current_pace > 35:
                     rest_duration = current_pace - prev_pace
                     
                     # Enhanced aid station analysis
