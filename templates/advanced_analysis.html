@@ -2160,6 +2160,12 @@
                 const runner = allRunners.find(r => r.id === runnerId);
                 const allRestPeriods = analysis?.rest_periods?.rest_periods || analysis?.rest_periods || [];
                 
+                console.log(`Runner ${runnerId} (${runner?.first_name} ${runner?.last_name}):`, {
+                    hasAnalysis: !!analysis,
+                    restPeriodsCount: allRestPeriods.length,
+                    analysisKeys: analysis ? Object.keys(analysis) : 'none'
+                });
+                
                 // Apply same filtering as chart - only rest periods with location data
                 const restPeriods = allRestPeriods.filter(rest => rest.mile || rest.start_mile);
                 
@@ -2183,6 +2189,10 @@
                 
                 // Add runner info to each rest period
                 restPeriods.forEach(rest => {
+                    // Debug: Log Finn's mile 96 rest specifically
+                    if (runnerId == 2 && (rest.mile >= 95 && rest.mile <= 97)) {
+                        console.log('FOUND FINN MILE 96 REST:', rest);
+                    }
                     allRunnerRestPeriods.push({
                         ...rest,
                         runnerId: runnerId,
@@ -2203,21 +2213,25 @@
             });
             
             console.log('All runner rest periods (sorted):', allRunnerRestPeriods);
-            // Group nearby rest periods
+            // Group rest periods by aid station (only group if same aid station)
             allRunnerRestPeriods.forEach(rest => {
                 const restMile = rest.mile || rest.start_mile || 0;
+                const restAidStation = rest.nearby_aid_station || 'Unknown';
                 let addedToGroup = false;
                 
-                // Check if this rest period can be added to an existing group
+                // Check if this rest period can be added to an existing group (same aid station)
                 for (let group of restGroups) {
+                    const groupAidStation = group[0].nearby_aid_station || 'Unknown';
                     const groupAvgMile = group.reduce((sum, r) => sum + (r.mile || r.start_mile || 0), 0) / group.length;
-                    if (Math.abs(restMile - groupAvgMile) <= MILE_VARIANCE_THRESHOLD) {
+                    
+                    // Only group if same aid station AND within mile variance
+                    if (restAidStation === groupAidStation && Math.abs(restMile - groupAvgMile) <= MILE_VARIANCE_THRESHOLD) {
                         group.push(rest);
                         addedToGroup = true;
                         break;
                     }
                 }
-                console.log(`Rest at mile ${restMile} added to group:`, addedToGroup);
+                console.log(`Rest at mile ${restMile} (${restAidStation}) added to group:`, addedToGroup);
                 
                 // If not added to any group, create a new group
                 if (!addedToGroup) {
@@ -2232,6 +2246,20 @@
                 return aAvgMile - bAvgMile;
             });
             console.log('Grouped rest periods:', restGroups);
+            console.log('Number of rest groups:', restGroups.length);
+            
+            // Debug: Log each group with its mile range and runners
+            restGroups.forEach((group, index) => {
+                const avgMile = group.reduce((sum, r) => sum + (r.mile || r.start_mile || 0), 0) / group.length;
+                const runnerIds = group.map(r => r.runnerId);
+                const restMiles = group.map(r => `${r.runnerId}:${r.mile || r.start_mile}`);
+                console.log(`Group ${index}: Mile ${avgMile.toFixed(1)}, Runners: ${runnerIds.join(', ')}, RestMiles: ${restMiles.join(', ')}`);
+                
+                // Extra debug for groups around mile 96
+                if (avgMile >= 95 && avgMile <= 97) {
+                    console.log('Mile 96 area group details:', group);
+                }
+            });
             
             // Generate runner headers
             html += `
@@ -2314,8 +2342,8 @@
             } else {
                 const colClass = selectedRunners.length === 1 ? '12' : selectedRunners.length === 2 ? '6' : '4';
                 
-                // Show first 5 rest groups initially
-                const visibleGroups = Math.min(5, restGroups.length);
+                // Show first 3 rest groups initially 
+                const visibleGroups = Math.min(3, restGroups.length);
                 
                 restGroups.slice(0, visibleGroups).forEach((group, groupIndex) => {
                     const avgMile = group.reduce((sum, r) => sum + (r.mile || r.start_mile || 0), 0) / group.length;
@@ -2325,8 +2353,54 @@
                     
                     // Create card for each runner (either rest card or placeholder)
                     selectedRunners.forEach(runnerId => {
-                        const runnerRest = group.find(r => r.runnerId === runnerId);
+                        // Find the best rest period for this runner prioritizing confidence and slowest pace
+                        const runnerRests = group.filter(r => r.runnerId == runnerId);
+                        const runnerRest = runnerRests.length > 0 ? 
+                            runnerRests.reduce((best, current) => {
+                                // Confidence scoring: high=3, medium=2, low=1, undefined=0
+                                const getConfidenceScore = (conf) => {
+                                    switch(conf) {
+                                        case 'high': return 3;
+                                        case 'medium': return 2;
+                                        case 'low': return 1;
+                                        default: return 0;
+                                    }
+                                };
+                                
+                                const bestConf = getConfidenceScore(best.confidence);
+                                const currentConf = getConfidenceScore(current.confidence);
+                                
+                                // 1. Prioritize higher confidence
+                                if (currentConf > bestConf) return current;
+                                if (bestConf > currentConf) return best;
+                                
+                                // 2. If same confidence, prioritize slower pace (higher pace_during)
+                                const bestPace = best.pace_during || best.actual_pace || 0;
+                                const currentPace = current.pace_during || current.actual_pace || 0;
+                                if (currentPace > bestPace) return current;
+                                if (bestPace > currentPace) return best;
+                                
+                                // 3. If same confidence and pace, prioritize closer to group average
+                                const bestDiff = Math.abs((best.mile || best.start_mile || 0) - avgMile);
+                                const currentDiff = Math.abs((current.mile || current.start_mile || 0) - avgMile);
+                                return currentDiff < bestDiff ? current : best;
+                            }) : null;
                         
+                        // Debug: Log if this is around mile 96 and involves Finn
+                        if (avgMile >= 95 && avgMile <= 97 && runnerId == 2) {
+                            console.log(`Mile ${avgMile.toFixed(1)} group for Finn (${runnerId}):`, {
+                                groupSize: group.length,
+                                groupRunnerIds: group.map(r => r.runnerId),
+                                allRunnerRests: runnerRests.map(r => ({ mile: r.mile, duration: r.estimated_rest_minutes })),
+                                selectedRest: runnerRest ? { mile: runnerRest.mile, duration: runnerRest.estimated_rest_minutes } : 'none',
+                                foundRunnerRest: !!runnerRest
+                            });
+                        }
+                        
+                        console.log(runnerRest ? 
+                            `Rendering rest card for runner ${runnerId} at mile ${runnerRest.mile || runnerRest.start_mile}` : 
+                            `Rendering placeholder for runner ${runnerId} at mile ~${avgMile.toFixed(1)}`
+                        );
                         if (runnerRest) {
                             html += createRestCard(runnerRest, colClass);
                         } else {
@@ -2349,7 +2423,38 @@
                         html += `<div class="row mb-3 rest-group" data-group-index="${actualGroupIndex}">`;
                         
                         selectedRunners.forEach(runnerId => {
-                            const runnerRest = group.find(r => r.runnerId === runnerId);
+                            // Find the best rest period for this runner prioritizing confidence and slowest pace
+                        const runnerRests = group.filter(r => r.runnerId == runnerId);
+                        const runnerRest = runnerRests.length > 0 ? 
+                            runnerRests.reduce((best, current) => {
+                                // Confidence scoring: high=3, medium=2, low=1, undefined=0
+                                const getConfidenceScore = (conf) => {
+                                    switch(conf) {
+                                        case 'high': return 3;
+                                        case 'medium': return 2;
+                                        case 'low': return 1;
+                                        default: return 0;
+                                    }
+                                };
+                                
+                                const bestConf = getConfidenceScore(best.confidence);
+                                const currentConf = getConfidenceScore(current.confidence);
+                                
+                                // 1. Prioritize higher confidence
+                                if (currentConf > bestConf) return current;
+                                if (bestConf > currentConf) return best;
+                                
+                                // 2. If same confidence, prioritize slower pace (higher pace_during)
+                                const bestPace = best.pace_during || best.actual_pace || 0;
+                                const currentPace = current.pace_during || current.actual_pace || 0;
+                                if (currentPace > bestPace) return current;
+                                if (bestPace > currentPace) return best;
+                                
+                                // 3. If same confidence and pace, prioritize closer to group average
+                                const bestDiff = Math.abs((best.mile || best.start_mile || 0) - avgMile);
+                                const currentDiff = Math.abs((current.mile || current.start_mile || 0) - avgMile);
+                                return currentDiff < bestDiff ? current : best;
+                            }) : null;
                             
                             if (runnerRest) {
                                 html += createRestCard(runnerRest, colClass);

@@ -13,7 +13,9 @@
       "Bash(sed:*)",
       "Bash(cat:*)",
       "Bash(sqlite3:*)",
-      "Bash(/dev/null)"
+      "Bash(/dev/null)",
+      "Read(//tmp/**)",
+      "Read(//home/jasongarcia4/Documents/ultra-smart/templates/**)"
     ],
     "deny": [],
     "ask": []
