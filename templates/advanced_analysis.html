@@ -140,10 +140,56 @@
                     <div class="col-12">
                         <div class="card">
                             <div class="card-header">
-                                <h5><i class="fas fa-chart-line"></i> Fatigue Progression Throughout Race</h5>
+                                <h5><i class="fas fa-chart-line"></i> Fatigue Progression Comparison</h5>
                             </div>
                             <div class="card-body">
-                                <canvas id="fatigueChart" height="100"></canvas>
+                                <!-- Fatigue Progression Explanation (Collapsible) -->
+                                <div class="mb-3">
+                                    <button class="btn btn-outline-info btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#fatigueProgressionExplanation" aria-expanded="false" aria-controls="fatigueProgressionExplanation">
+                                        <i class="fas fa-info-circle"></i> Understanding Fatigue Progression
+                                    </button>
+                                </div>
+                                
+                                <div class="collapse mb-4" id="fatigueProgressionExplanation">
+                                    <div class="card border-info">
+                                        <div class="card-body">
+                                            <h6 class="card-title text-info"><i class="fas fa-battery-quarter"></i> How Fatigue Progression Works</h6>
+                                            <p class="small mb-3">
+                                                <strong>Fatigue progression tracks how runners' energy levels change throughout the race</strong> by analyzing pace slowdown 
+                                                compared to expected performance based on terrain difficulty and race position.
+                                            </p>
+                                            
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <h6 class="small fw-bold">Fatigue Factors:</h6>
+                                                    <ul class="small mb-3">
+                                                        <li><strong>Terrain Impact:</strong> Elevation gain, technical sections</li>
+                                                        <li><strong>Distance Covered:</strong> Cumulative mileage effects</li>
+                                                        <li><strong>Time of Day:</strong> Heat, darkness, circadian rhythm</li>
+                                                        <li><strong>Nutrition/Hydration:</strong> Energy management over time</li>
+                                                    </ul>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <h6 class="small fw-bold">Reading the Chart:</h6>
+                                                    <ul class="small mb-3">
+                                                        <li><strong>Higher values:</strong> More fatigue, slower than expected</li>
+                                                        <li><strong>Lower values:</strong> Less fatigue, maintaining pace well</li>
+                                                        <li><strong>Sharp increases:</strong> Sudden energy drops or challenges</li>
+                                                        <li><strong>Plateaus:</strong> Steady state or recovery periods</li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="alert alert-light mb-0">
+                                                <small><i class="fas fa-lightbulb text-warning"></i> 
+                                                <strong>Strategy Tip:</strong> Compare different runners' fatigue patterns to identify optimal pacing strategies 
+                                                and critical sections where energy management becomes crucial.</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <canvas id="multiRunnerFatigueChart" height="100"></canvas>
                                 
                                     
                                     <!-- Aid Station Legend -->
@@ -175,9 +221,15 @@
                     <div class="col-12">
                         <div class="card">
                             <div class="card-header">
-                                <h5><i class="fas fa-route"></i> Course Segment Performance</h5>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h5 class="mb-0"><i class="fas fa-route"></i> Course Segment Performance</h5>
+                                    <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#segmentPerformanceContent" aria-expanded="true" aria-controls="segmentPerformanceContent">
+                                        <i class="fas fa-chevron-up"></i> <span class="d-none d-md-inline">Collapse</span>
+                                    </button>
+                                </div>
                             </div>
                             <div class="card-body">
+                                <div class="collapse show" id="segmentPerformanceContent">
                                 <!-- Performance Score Explanation (Collapsible) -->
                                 <div class="mb-3">
                                     <button class="btn btn-outline-info btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#performanceExplanation" aria-expanded="false" aria-controls="performanceExplanation">
@@ -272,6 +324,7 @@
                                         </tbody>
                                     </table>
                                 </div>
+                                </div> <!-- End segmentPerformanceContent collapse -->
                             </div>
                         </div>
                     </div>
@@ -420,38 +473,6 @@
                     </div>
                 </div>
 
-                <!-- Fatigue Progression Chart -->
-                <div class="row mb-4">
-                    <div class="col-12">
-                        <div class="card">
-                            <div class="card-header">
-                                <h5><i class="fas fa-chart-line"></i> Fatigue Progression Comparison</h5>
-                            </div>
-                            <div class="card-body">
-                                <canvas id="multiRunnerFatigueChart" height="100"></canvas>
-                                
-                                <!-- Aid Station Legend -->
-                                <div class="mt-3">
-                                    <h6 class="mb-2"><i class="fas fa-first-aid"></i> Aid Stations:</h6>
-                                    <div class="d-flex align-items-center gap-3 flex-wrap">
-                                        <div class="d-flex align-items-center">
-                                            <div style="width: 20px; height: 3px; background-color: #4ecdc4; border-radius: 2px;" class="me-2"></div>
-                                            <span class="badge bg-light text-dark">🏃 Aid Stations</span>
-                                        </div>
-                                        <div class="d-flex align-items-center">
-                                            <div style="width: 20px; height: 3px; background-color: #17a2b8; border-radius: 2px;" class="me-2"></div>
-                                            <span class="badge bg-light text-dark">💧 Water Stations</span>
-                                        </div>
-                                        <div class="d-flex align-items-center">
-                                            <div style="width: 20px; height: 3px; background-color: #ff6b6b; border-radius: 2px;" class="me-2"></div>
-                                            <span class="badge bg-light text-dark">🛏️ Sleep Stations</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
             </div>
         </div>
 
@@ -741,13 +762,27 @@
             // Update the multi-runner summary table
             updateMultiRunnerTable(data.analyses);
             
-            // Create multi-runner fatigue chart in the single-runner chart area
-            createFatigueChartMultiRunner(data.analyses, courseSegments);
+            // Create multi-runner fatigue chart
+            createMultiRunnerFatigueChart(data.analyses, courseSegments);
             
             // Update the single-runner sections with multi-runner data
             updateSegmentTableMultiRunner(courseSegments, data.analyses);
             updateRestPeriodsListMultiRunner(data.analyses, data.runner_splits);
             updateRecommendationsMultiRunner(data.analyses);
+            
+            // Make sure recommendations section is visible for multi-runner  
+            const overallStrategyEl = document.getElementById('overallStrategy');
+            if (overallStrategyEl) {
+                const recommendationsCard = overallStrategyEl.closest('.card');
+                if (recommendationsCard) {
+                    recommendationsCard.style.display = 'block';
+                    console.log('Made recommendations section visible');
+                } else {
+                    console.log('Could not find recommendations card');
+                }
+            } else {
+                console.log('Could not find overallStrategy element');
+            }
         }
 
         function createFatigueChart(fatigueData, courseSegments) {
@@ -2840,51 +2875,97 @@
         }
 
         function updateRecommendationsMultiRunner(analyses) {
-            // Use the single-runner recommendations section but show multi-runner comparison
+            console.log('updateRecommendationsMultiRunner called with:', analyses);
             
-            // Overall strategy
+            // Check what data we actually have
+            Object.keys(analyses).forEach(runnerId => {
+                console.log(`Runner ${runnerId} data keys:`, Object.keys(analyses[runnerId]));
+                if (analyses[runnerId].recommendations) {
+                    console.log(`Runner ${runnerId} recommendations:`, analyses[runnerId].recommendations);
+                }
+            });
+            
+            // Hide overall strategy section for multi-runner mode
             const overallContainer = document.getElementById('overallStrategy');
             if (overallContainer) {
-                overallContainer.textContent = "Multi-runner comparison mode - individual strategies shown below";
+                const overallCol = overallContainer.closest('.col-md-8');
+                if (overallCol) {
+                    overallCol.style.display = 'none';
+                }
             }
             
-            // Segment recommendations table
-            const tbody = document.querySelector('#recommendationsTable tbody');
-            if (tbody) {
-                tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">Individual recommendations vary by runner - see summary table above</td></tr>';
+            // Hide segment recommendations table for multi-runner mode and expand critical segments
+            const recommendationsTableContainer = document.querySelector('#recommendationsTable');
+            if (recommendationsTableContainer) {
+                const tableCard = recommendationsTableContainer.closest('.col-md-4');
+                if (tableCard) {
+                    tableCard.style.display = 'none';
+                }
             }
             
-            // Critical segments
+            // Expand critical segments to full width for multi-runner mode
+            const criticalSegmentsCard = document.getElementById('criticalSegments');
+            if (criticalSegmentsCard) {
+                const criticalCol = criticalSegmentsCard.closest('.col-md-4');
+                if (criticalCol) {
+                    criticalCol.className = 'col-12';
+                }
+            }
+            
+            // Critical segments - find segments where runners struggled most
             const criticalContainer = document.getElementById('criticalSegments');
             if (criticalContainer) {
-                // Find common critical segments across all runners
-                const allCritical = selectedRunners.flatMap(runnerId => {
+                const segmentPerformances = [];
+                
+                selectedRunners.forEach(runnerId => {
                     const analysis = analyses[runnerId];
-                    return analysis?.recommendations?.critical_segments || [];
+                    if (analysis?.course_analysis?.segment_analysis) {
+                        analysis.course_analysis.segment_analysis.forEach(segment => {
+                            segmentPerformances.push({
+                                name: segment.segment_name,
+                                difficulty: segment.difficulty_rating || 0,
+                                performance: segment.performance_score || 0,
+                                runnerId: runnerId
+                            });
+                        });
+                    }
                 });
                 
-                // Count frequency of each segment
-                const segmentCounts = {};
-                allCritical.forEach(segment => {
-                    segmentCounts[segment] = (segmentCounts[segment] || 0) + 1;
+                // Group by segment and find average difficulty
+                const segmentStats = {};
+                segmentPerformances.forEach(perf => {
+                    if (!segmentStats[perf.name]) {
+                        segmentStats[perf.name] = { difficulties: [], performances: [], count: 0 };
+                    }
+                    segmentStats[perf.name].difficulties.push(perf.difficulty);
+                    segmentStats[perf.name].performances.push(perf.performance);
+                    segmentStats[perf.name].count++;
                 });
                 
-                // Show segments mentioned by multiple runners
-                const commonSegments = Object.entries(segmentCounts)
-                    .filter(([segment, count]) => count > 1)
-                    .sort(([,a], [,b]) => b - a)
+                // Find most challenging segments
+                const criticalSegments = Object.entries(segmentStats)
+                    .map(([name, stats]) => ({
+                        name,
+                        avgDifficulty: stats.difficulties.reduce((a, b) => a + b, 0) / stats.count,
+                        avgPerformance: stats.performances.reduce((a, b) => a + b, 0) / stats.count,
+                        count: stats.count
+                    }))
+                    .sort((a, b) => b.avgDifficulty - a.avgDifficulty)
                     .slice(0, 5);
                 
-                if (commonSegments.length > 0) {
-                    const html = commonSegments.map(([segment, count]) => `
+                if (criticalSegments.length > 0) {
+                    const html = criticalSegments.map(segment => `
                         <div class="list-group-item list-group-item-warning">
-                            <strong>${segment}</strong>
-                            <small class="text-muted d-block">Critical for ${count} of ${selectedRunners.length} runners</small>
+                            <strong>${segment.name}</strong>
+                            <small class="text-muted d-block">
+                                Difficulty Rating: ${segment.avgDifficulty.toFixed(1)}/5.0
+                                ${segment.count > 1 ? ` (${segment.count} runners)` : ''}
+                            </small>
                         </div>
                     `).join('');
                     criticalContainer.innerHTML = html;
                 } else {
-                    criticalContainer.innerHTML = '<div class="list-group-item">No common critical segments identified</div>';
+                    criticalContainer.innerHTML = '<div class="list-group-item">No segment analysis data available</div>';
                 }
             }
         }
