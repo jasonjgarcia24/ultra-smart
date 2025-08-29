@@ -746,7 +746,7 @@
             
             // Update the single-runner sections with multi-runner data
             updateSegmentTableMultiRunner(courseSegments, data.analyses);
-            updateRestPeriodsListMultiRunner(data.analyses);
+            updateRestPeriodsListMultiRunner(data.analyses, data.runner_splits);
             updateRecommendationsMultiRunner(data.analyses);
         }
 
@@ -1179,7 +1179,6 @@
                 return new bootstrap.Tooltip(tooltipTriggerEl);
             });
         }
-
 
         function updateRestPeriodsList(restData) {
             const container = document.getElementById('restPeriodsList');
@@ -1797,6 +1796,7 @@
                 const analysis = analyses[runnerId];
                 const runner = allRunners.find(r => r.id === runnerId);
                 const restPeriods = analysis?.rest_periods?.rest_periods || analysis?.rest_periods || [];
+                console.log(`Runner ${runnerId} (${runner.first_name} ${runner.last_name}) has ${restPeriods} rest periods`);
                 
                 html += `
                     <div class="col-md-6 col-lg-4 mb-3">
@@ -1877,6 +1877,21 @@
                 ctx.fillText('No fatigue data available for selected runners', ctx.canvas.width / 2, ctx.canvas.height / 2);
                 return;
             }
+
+            // Get max mile values across all runners for x-axis scaling
+            let allMileValues = [];
+            datasets.forEach(ds => {
+                allMileValues = allMileValues.concat(ds.data.map(p => p.x));
+            });
+            const maxMile = Math.max(...allMileValues);
+
+            // Get min/max fatigue values across all runners for y-axis scaling
+            let allFatigueValues = [];
+            datasets.forEach(ds => {
+                allFatigueValues = allFatigueValues.concat(ds.data.map(p => p.y));
+            });
+            const minFatigue = Math.min(...allFatigueValues);
+            const maxFatigue = Math.max(...allFatigueValues);
             
             // Create the chart using Chart.js - reuse the segment background plugin logic
             new Chart(ctx, {
@@ -1909,15 +1924,15 @@
                                 text: 'Mile'
                             },
                             min: 0,
-                            max: 260
+                            max: maxMile + 1
                         },
                         y: {
                             title: {
                                 display: true,
                                 text: 'Fatigue Factor'
                             },
-                            min: 0.8,
-                            max: 2.5
+                            min: minFatigue - 0.1 < 0 ? 0 : minFatigue - 0.1,
+                            max: maxFatigue + 0.1 < 2.5 ? 2.5 : maxFatigue + 0.1
                         }
                     }
                 }
@@ -2028,7 +2043,7 @@
             tbody.innerHTML = html;
         }
 
-        function updateRestPeriodsListMultiRunner(analyses) {
+        function updateRestPeriodsListMultiRunner(analyses, runner_splits) {
             // Use the single-runner rest periods container but show multi-runner comparison
             const container = document.getElementById('restPeriodsList');
             
@@ -2155,6 +2170,17 @@
                     restPeriodsArray: restPeriods
                 });
                 
+                // Special debug for Finn (runner ID 2)
+                if (runnerId == 2 && runner?.first_name === 'Finn') {
+                    console.log('FINN DEBUG - Rest periods around mile 96:');
+                    restPeriods.forEach(rest => {
+                        const mile = rest.mile || rest.start_mile || 0;
+                        if (mile >= 90 && mile <= 100) {
+                            console.log(`Mile ${mile}:`, rest);
+                        }
+                    });
+                }
+                
                 // Add runner info to each rest period
                 restPeriods.forEach(rest => {
                     allRunnerRestPeriods.push({
@@ -2176,6 +2202,7 @@
                 return aMile - bMile;
             });
             
+            console.log('All runner rest periods (sorted):', allRunnerRestPeriods);
             // Group nearby rest periods
             allRunnerRestPeriods.forEach(rest => {
                 const restMile = rest.mile || rest.start_mile || 0;
@@ -2190,6 +2217,7 @@
                         break;
                     }
                 }
+                console.log(`Rest at mile ${restMile} added to group:`, addedToGroup);
                 
                 // If not added to any group, create a new group
                 if (!addedToGroup) {
@@ -2203,6 +2231,7 @@
                 const bAvgMile = b.reduce((sum, r) => sum + (r.mile || r.start_mile || 0), 0) / b.length;
                 return aAvgMile - bAvgMile;
             });
+            console.log('Grouped rest periods:', restGroups);
             
             // Generate runner headers
             html += `
@@ -2358,10 +2387,10 @@
             console.log('Container innerHTML set. Current content length:', container.innerHTML.length);
             
             // Create the pace vs elevation chart
-            createPaceElevationChart(analyses);
+            createPaceElevationChart(analyses, runner_splits);
         }
 
-        function createPaceElevationChart(analyses) {
+        function createPaceElevationChart(analyses, runner_splits) {
             const canvas = document.getElementById('paceElevationChart');
             if (!canvas) {
                 console.error('Pace elevation chart canvas not found');
@@ -2382,9 +2411,12 @@
             // Build datasets for each runner's pace data
             const paceDatasets = [];
             const restPeriodDatasets = [];
+            let maxPace = 0;
+            let minPace = Infinity;
             
             selectedRunners.forEach((runnerId, index) => {
                 const analysis = analyses[runnerId];
+                const splits = runner_splits[runnerId];
                 const runner = allRunners.find(r => r.id === runnerId);
                 const color = runnerColors[index % runnerColors.length];
                 
@@ -2397,10 +2429,21 @@
                     x: point.mile,
                     y: point.fatigue_factor * 12 // Approximate base pace of 12 min/mile
                 }));
+
+                const splitsData = splits.map(split => ({
+                    x: split.mile_number,
+                    y: split.pace_per_mile
+                }));
+
+                // Update max/min pace for chart scaling
+                splitsData.forEach(d => {
+                    if (d.y > maxPace) { maxPace = d.y; }
+                    if (d.y < minPace) { minPace = d.y; }
+                });
                 
                 paceDatasets.push({
                     label: `${runner.first_name} ${runner.last_name} Pace`,
-                    data: paceData,
+                    data: splitsData,
                     borderColor: color,
                     backgroundColor: color + '20',
                     borderWidth: 2,
@@ -2413,6 +2456,20 @@
                 
                 // Add rest period markers
                 const restPeriods = analysis?.rest_periods?.rest_periods || analysis?.rest_periods || [];
+                console.log(`Runner ${runnerId} (${runner?.first_name}) rest periods:`, restPeriods);
+                
+                // Debug for Finn
+                if (runner.first_name === 'Finn') {
+                    console.log('FINN CHART DEBUG - Rest periods data:', restPeriods);
+                    console.log('FINN CHART DEBUG - Looking for mile 96...');
+                    restPeriods.forEach(rest => {
+                        const mile = rest.mile || rest.start_mile || 0;
+                        if (mile >= 90 && mile <= 100) {
+                            console.log(`Chart Mile ${mile}:`, rest);
+                        }
+                    });
+                }
+                
                 if (restPeriods.length > 0) {
                     const restMarkers = restPeriods
                         .filter(rest => rest.mile || rest.start_mile)
@@ -2619,10 +2676,10 @@
                                 display: true,
                                 text: 'Pace (min/mile)'
                             },
-                            min: 8,
-                            max: 40,
-                            suggestedMin: 8,
-                            suggestedMax: 25
+                            min: minPace < 5 ? Math.floor(minPace / 5) * 5 : 5,
+                            max: maxPace > 30 ? Math.ceil(maxPace / 5) * 5 : 30,
+                            suggestedMin: 5,
+                            suggestedMax: 30
                         },
                         elevationAxis: {
                             type: 'linear',

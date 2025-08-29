@@ -1235,10 +1235,14 @@ def api_advanced_analysis():
         # Get race_id (assuming Cocodona 250 2025 is race_id 1)
         race_id = 1
         
+        runner_splits = {}
         analyses = {}
         
         for runner_id in runner_ids:
             try:
+                # Get runner splits
+                runner_splits[runner_id] = analyzer.get_runner_splits(runner_id, race_id)
+
                 # Run all analysis components
                 fatigue_analysis = analyzer.calculate_fatigue_factors(runner_id, race_id)
                 rest_periods = analyzer.detect_rest_periods(runner_id, race_id)
@@ -1260,8 +1264,9 @@ def api_advanced_analysis():
         
         return jsonify({
             'status': 'success',
-            'analyses': analyses,
-            'race_id': race_id
+            'race_id': race_id,
+            'runner_splits': runner_splits,
+            'analyses': analyses
         })
         
     except Exception as e:

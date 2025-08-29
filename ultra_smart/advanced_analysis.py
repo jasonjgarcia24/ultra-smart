@@ -133,6 +133,11 @@ class AdvancedAnalyzer:
         elevation_change = self._calculate_elevation_change(start_mile, end_mile)
         return elevation_change.get('gain', 0.0)
         
+    def get_runner_splits(self, runner_id: int, race_id: int, field: str = None) -> List[Dict]:
+        """Public method to get runner's split data"""
+        print(field)
+        return self._get_runner_splits(runner_id, race_id) if field is None else [split[field] for split in self._get_runner_splits(runner_id, race_id)]
+
     def calculate_fatigue_factors(self, runner_id: int, race_id: int) -> Dict:
         """
         Calculate perceived fatigue factors based on pace variations,
@@ -201,6 +206,7 @@ class AdvancedAnalyzer:
         splits = self._get_runner_splits(runner_id, race_id)
         aid_stations = self._get_aid_stations(race_id)
         
+        
         rest_periods = []
         aid_station_stops = []  # Track all aid station interactions
         
@@ -210,18 +216,20 @@ class AdvancedAnalyzer:
             
             current_pace = current_split.get('pace_per_mile', 0)
             prev_pace = prev_split.get('pace_per_mile', 0)
+            mile = current_split.get('mile_number', i + 1)            
             
             # Look for significant pace increases (indicating slower movement/rest)
             if current_pace > 0 and prev_pace > 0:
                 pace_increase = current_pace / prev_pace
-                mile = current_split.get('mile_number', i + 1)
                 
                 # Find nearby aid stations (using expanded 5-mile radius for GPS variations)
                 nearby_aid = self._find_nearby_aid_station(mile, aid_stations, radius=5.0)
                 
                 # Make detection more sensitive - lower threshold from 1.5x to 1.3x
                 # Also detect extremely slow paces (>35 min/mile) regardless of previous pace
+                
                 if pace_increase > 1.3 or current_pace > 35:
+                
                     rest_duration = current_pace - prev_pace
                     
                     # Enhanced aid station analysis
@@ -457,11 +465,9 @@ class AdvancedAnalyzer:
             difficulty_rating = difficulty_details['difficulty']
             
             # Debug: Check if breakdown data exists and is JSON serializable
-            print(f"Storing breakdown for {segment_name}: {bool(difficulty_details.get('factors'))}")
             try:
                 import json
                 json_test = json.dumps(difficulty_details)
-                print(f"JSON serialization successful for {segment_name}")
             except Exception as e:
                 print(f"JSON serialization failed for {segment_name}: {e}")
             
@@ -1169,10 +1175,7 @@ class AdvancedAnalyzer:
         # Base difficulty starts at moderate
         difficulty = 3.0
         factors = []
-        
-        # Debug logging
-        print(f"Calculating difficulty for {segment_name}: {start_mile}-{end_mile}")
-        
+                
         # Ensure aid station data is not None
         if start_aid is None:
             start_aid = {}
@@ -1349,10 +1352,7 @@ class AdvancedAnalyzer:
             'factors': factors,
             'final_adjustment': final_difficulty - 3.0
         }
-        
-        # Debug logging
-        print(f"Difficulty result for {segment_name}: {result}")
-        
+                
         return result
     
     def _determine_terrain_type(self, start_aid: Dict, end_aid: Dict, difficulty: float) -> str:
