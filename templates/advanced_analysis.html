@@ -2138,6 +2138,8 @@
                 <div class="row">
             `;
             
+            // Collect all rest periods with runner info for grouping
+            const allRunnerRestPeriods = [];
             selectedRunners.forEach(runnerId => {
                 const analysis = analyses[runnerId];
                 const runner = allRunners.find(r => r.id === runnerId);
@@ -2153,99 +2155,195 @@
                     restPeriodsArray: restPeriods
                 });
                 
-                html += `
-                    <div class="col-md-${selectedRunners.length === 1 ? '12' : selectedRunners.length === 2 ? '6' : '4'} mb-3">
-                        <div class="card h-100">
-                            <div class="card-header">
-                                <h6 class="mb-0"><i class="fas fa-user"></i> ${runner.first_name} ${runner.last_name}</h6>
-                                ${restPeriods.length > 0 ? `<small class="text-muted">${restPeriods.length} rest period${restPeriods.length === 1 ? '' : 's'} detected</small>` : ''}
+                // Add runner info to each rest period
+                restPeriods.forEach(rest => {
+                    allRunnerRestPeriods.push({
+                        ...rest,
+                        runnerId: runnerId,
+                        runnerName: `${runner.first_name} ${runner.last_name}`
+                    });
+                });
+            });
+            
+            // Group rest periods by proximity (within 5-mile variance for GPS imprecision)
+            const MILE_VARIANCE_THRESHOLD = 5.0;
+            const restGroups = [];
+            
+            // Sort all rest periods by mile marker
+            allRunnerRestPeriods.sort((a, b) => {
+                const aMile = a.mile || a.start_mile || 0;
+                const bMile = b.mile || b.start_mile || 0;
+                return aMile - bMile;
+            });
+            
+            // Group nearby rest periods
+            allRunnerRestPeriods.forEach(rest => {
+                const restMile = rest.mile || rest.start_mile || 0;
+                let addedToGroup = false;
+                
+                // Check if this rest period can be added to an existing group
+                for (let group of restGroups) {
+                    const groupAvgMile = group.reduce((sum, r) => sum + (r.mile || r.start_mile || 0), 0) / group.length;
+                    if (Math.abs(restMile - groupAvgMile) <= MILE_VARIANCE_THRESHOLD) {
+                        group.push(rest);
+                        addedToGroup = true;
+                        break;
+                    }
+                }
+                
+                // If not added to any group, create a new group
+                if (!addedToGroup) {
+                    restGroups.push([rest]);
+                }
+            });
+            
+            // Sort groups by average mile marker
+            restGroups.sort((a, b) => {
+                const aAvgMile = a.reduce((sum, r) => sum + (r.mile || r.start_mile || 0), 0) / a.length;
+                const bAvgMile = b.reduce((sum, r) => sum + (r.mile || r.start_mile || 0), 0) / b.length;
+                return aAvgMile - bAvgMile;
+            });
+            
+            // Generate runner headers
+            html += `
+                <div class="row mb-3">
+                    ${selectedRunners.map(runnerId => {
+                        const runner = allRunners.find(r => r.id === runnerId);
+                        return `
+                            <div class="col-md-${selectedRunners.length === 1 ? '12' : selectedRunners.length === 2 ? '6' : '4'}">
+                                <h6 class="text-center text-primary mb-0">
+                                    <i class="fas fa-user"></i> ${runner.first_name} ${runner.last_name}
+                                </h6>
                             </div>
-                            <div class="card-body">
-                                ${restPeriods.length === 0 ? 
-                                    '<p class="text-muted">No significant rest periods detected.</p>' :
-                                    `<div class="rest-periods-container" data-runner-id="${runnerId}">
-                                        ${restPeriods.slice(0, 3).map(rest => {
-                                            const isCrewRest = rest.rest_type?.startsWith('crew');
-                                            const alertClass = rest.is_sleep_station ? 'alert-warning' : 
-                                                             isCrewRest ? 'alert-primary' :
-                                                             rest.rest_type === 'medical' ? 'alert-danger' : 'alert-info';
-                                            const icon = rest.is_sleep_station ? 'fas fa-bed' :
-                                                       isCrewRest ? 'fas fa-users' :
-                                                       rest.rest_type === 'medical' ? 'fas fa-medkit' :
-                                                       rest.rest_type === 'resupply' ? 'fas fa-box' : 'fas fa-clock';
-                                            
-                                            return `
-                                                <div class="alert ${alertClass}">
-                                                    <div class="d-flex justify-content-between align-items-start">
-                                                        <div>
-                                                            <div class="mb-1">
-                                                                <i class="${icon}"></i> <strong>Mile ${rest.mile || rest.start_mile}</strong>
-                                                                ${rest.nearby_aid_station ? ` - ${rest.nearby_aid_station}` : ''}
-                                                                ${rest.is_sleep_station ? '<span class="badge bg-warning ms-2">Sleep Station</span>' : ''}
-                                                            </div>
-                                                            <small class="text-muted d-block">${rest.likely_reason || 'Rest period detected'}</small>
-                                                            ${rest.aid_services && rest.aid_services.length > 0 ? 
-                                                                `<small class="text-muted">Services: ${rest.aid_services.join(', ')}</small>` : ''
-                                                            }
-                                                        </div>
-                                                        <div class="text-end">
-                                                            <div><small><strong>${rest.estimated_rest_minutes ? rest.estimated_rest_minutes.toFixed(1) : rest.duration_minutes ? rest.duration_minutes.toFixed(0) : 'N/A'} min</strong> rest</small></div>
-                                                            ${rest.pace_ratio ? `<div><small class="text-muted">${rest.pace_ratio.toFixed(1)}x slower</small></div>` : ''}
-                                                            <small class="badge bg-secondary">${rest.confidence || 'medium'} confidence</small>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            `;
-                                        }).join('')}
-                                        <div class="hidden-rest-periods" style="display: none;">
-                                            ${restPeriods.slice(3).map(rest => {
-                                                const isCrewRest = rest.rest_type?.startsWith('crew');
-                                                const alertClass = rest.is_sleep_station ? 'alert-warning' : 
-                                                                 isCrewRest ? 'alert-primary' :
-                                                                 rest.rest_type === 'medical' ? 'alert-danger' : 'alert-info';
-                                                const icon = rest.is_sleep_station ? 'fas fa-bed' :
-                                                           isCrewRest ? 'fas fa-users' :
-                                                           rest.rest_type === 'medical' ? 'fas fa-medkit' :
-                                                           rest.rest_type === 'resupply' ? 'fas fa-box' : 'fas fa-clock';
-                                                
-                                                return `
-                                                    <div class="alert ${alertClass}">
-                                                        <div class="d-flex justify-content-between align-items-start">
-                                                            <div>
-                                                                <div class="mb-1">
-                                                                    <i class="${icon}"></i> <strong>Mile ${rest.mile || rest.start_mile}</strong>
-                                                                    ${rest.nearby_aid_station ? ` - ${rest.nearby_aid_station}` : ''}
-                                                                    ${rest.is_sleep_station ? '<span class="badge bg-warning ms-2">Sleep Station</span>' : ''}
-                                                                </div>
-                                                                <small class="text-muted d-block">${rest.likely_reason || 'Rest period detected'}</small>
-                                                                ${rest.aid_services && rest.aid_services.length > 0 ? 
-                                                                    `<small class="text-muted">Services: ${rest.aid_services.join(', ')}</small>` : ''
-                                                                }
-                                                            </div>
-                                                            <div class="text-end">
-                                                                <div><small><strong>${rest.estimated_rest_minutes ? rest.estimated_rest_minutes.toFixed(1) : rest.duration_minutes ? rest.duration_minutes.toFixed(0) : 'N/A'} min</strong> rest</small></div>
-                                                                ${rest.pace_ratio ? `<div><small class="text-muted">${rest.pace_ratio.toFixed(1)}x slower</small></div>` : ''}
-                                                                <small class="badge bg-secondary">${rest.confidence || 'medium'} confidence</small>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                `;
-                                            }).join('')}
-                                        </div>
-                                        ${restPeriods.length > 3 ? 
-                                            `<div class="text-center">
-                                                <button class="btn btn-sm btn-outline-secondary show-more-btn" onclick="toggleRestPeriods('${runnerId}', this)">
-                                                    <i class="fas fa-chevron-down"></i> Show ${restPeriods.length - 3} more
-                                                </button>
-                                            </div>` : ''
-                                        }
-                                    </div>`
-                                }
+                        `;
+                    }).join('')}
+                </div>
+            `;
+            
+            // Function to create a rest period card (preserving original styling)
+            function createRestCard(rest, colClass) {
+                const isCrewRest = rest.rest_type?.startsWith('crew');
+                const alertClass = rest.is_sleep_station ? 'alert-warning' : 
+                                 isCrewRest ? 'alert-primary' :
+                                 rest.rest_type === 'medical' ? 'alert-danger' : 'alert-info';
+                const icon = rest.is_sleep_station ? 'fas fa-bed' :
+                           isCrewRest ? 'fas fa-users' :
+                           rest.rest_type === 'medical' ? 'fas fa-medkit' :
+                           rest.rest_type === 'resupply' ? 'fas fa-box' : 'fas fa-clock';
+                
+                return `
+                    <div class="col-md-${colClass}">
+                        <div class="alert ${alertClass} mb-0">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <div class="mb-1">
+                                        <i class="${icon}"></i> <strong>Mile ${rest.mile || rest.start_mile}</strong>
+                                        ${rest.nearby_aid_station ? ` - ${rest.nearby_aid_station}` : ''}
+                                        ${rest.is_sleep_station ? '<span class="badge bg-warning ms-2">Sleep Station</span>' : ''}
+                                    </div>
+                                    <small class="text-muted d-block">${rest.likely_reason || 'Rest period detected'}</small>
+                                    ${rest.aid_services && rest.aid_services.length > 0 ? 
+                                        `<small class="text-muted">Services: ${rest.aid_services.join(', ')}</small>` : ''
+                                    }
+                                </div>
+                                <div class="text-end">
+                                    <div><small><strong>${rest.estimated_rest_minutes ? rest.estimated_rest_minutes.toFixed(1) : rest.duration_minutes ? rest.duration_minutes.toFixed(0) : 'N/A'} min</strong> rest</small></div>
+                                    ${rest.pace_ratio ? `<div><small class="text-muted">${rest.pace_ratio.toFixed(1)}x slower</small></div>` : ''}
+                                    <small class="badge bg-secondary">${rest.confidence || 'medium'} confidence</small>
+                                </div>
                             </div>
                         </div>
                     </div>
                 `;
-            });
+            }
+            
+            // Function to create a placeholder card for runners without rest at this location
+            function createPlaceholderCard(avgMile, nearbyAidStation, colClass) {
+                return `
+                    <div class="col-md-${colClass}">
+                        <div class="alert alert-light border mb-0" style="opacity: 0.6;">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <div class="mb-1">
+                                        <i class="fas fa-minus-circle text-muted"></i> <strong>Mile ~${avgMile.toFixed(1)}</strong>
+                                        ${nearbyAidStation ? ` - ${nearbyAidStation}` : ''}
+                                    </div>
+                                    <small class="text-muted d-block">No rest detected</small>
+                                </div>
+                                <div class="text-end">
+                                    <small class="badge bg-light text-muted">no rest</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Generate horizontally aligned rest period cards
+            if (restGroups.length === 0) {
+                html += '<div class="text-center text-muted py-4"><p>No rest period data available for selected runners</p></div>';
+            } else {
+                const colClass = selectedRunners.length === 1 ? '12' : selectedRunners.length === 2 ? '6' : '4';
+                
+                // Show first 5 rest groups initially
+                const visibleGroups = Math.min(5, restGroups.length);
+                
+                restGroups.slice(0, visibleGroups).forEach((group, groupIndex) => {
+                    const avgMile = group.reduce((sum, r) => sum + (r.mile || r.start_mile || 0), 0) / group.length;
+                    const nearbyAidStation = group.find(r => r.nearby_aid_station)?.nearby_aid_station || '';
+                    
+                    html += `<div class="row mb-3 rest-group" data-group-index="${groupIndex}">`;
+                    
+                    // Create card for each runner (either rest card or placeholder)
+                    selectedRunners.forEach(runnerId => {
+                        const runnerRest = group.find(r => r.runnerId === runnerId);
+                        
+                        if (runnerRest) {
+                            html += createRestCard(runnerRest, colClass);
+                        } else {
+                            html += createPlaceholderCard(avgMile, nearbyAidStation, colClass);
+                        }
+                    });
+                    
+                    html += `</div>`;
+                });
+                
+                // Add hidden groups for "show more" functionality
+                if (restGroups.length > visibleGroups) {
+                    html += `<div class="hidden-rest-groups" style="display: none;">`;
+                    
+                    restGroups.slice(visibleGroups).forEach((group, groupIndex) => {
+                        const actualGroupIndex = visibleGroups + groupIndex;
+                        const avgMile = group.reduce((sum, r) => sum + (r.mile || r.start_mile || 0), 0) / group.length;
+                        const nearbyAidStation = group.find(r => r.nearby_aid_station)?.nearby_aid_station || '';
+                        
+                        html += `<div class="row mb-3 rest-group" data-group-index="${actualGroupIndex}">`;
+                        
+                        selectedRunners.forEach(runnerId => {
+                            const runnerRest = group.find(r => r.runnerId === runnerId);
+                            
+                            if (runnerRest) {
+                                html += createRestCard(runnerRest, colClass);
+                            } else {
+                                html += createPlaceholderCard(avgMile, nearbyAidStation, colClass);
+                            }
+                        });
+                        
+                        html += `</div>`;
+                    });
+                    
+                    html += `</div>`;
+                    
+                    // Add show more button
+                    html += `
+                        <div class="text-center mb-4">
+                            <button class="btn btn-outline-secondary" onclick="toggleAllRestGroups(this)">
+                                <i class="fas fa-chevron-down"></i> Show ${restGroups.length - visibleGroups} more rest locations
+                            </button>
+                        </div>
+                    `;
+                }
+            }
             
             html += '</div>';
             
@@ -2567,6 +2665,21 @@
             }
         }
 
+        function toggleAllRestGroups(button) {
+            const hiddenContainer = document.querySelector('.hidden-rest-groups');
+            const icon = button.querySelector('i');
+            
+            if (hiddenContainer.style.display === 'none') {
+                // Show hidden rest groups
+                hiddenContainer.style.display = 'block';
+                button.innerHTML = '<i class="fas fa-chevron-up"></i> Show less rest locations';
+            } else {
+                // Hide rest groups
+                hiddenContainer.style.display = 'none';
+                const hiddenGroups = hiddenContainer.querySelectorAll('.rest-group').length;
+                button.innerHTML = `<i class="fas fa-chevron-down"></i> Show ${hiddenGroups} more rest locations`;
+            }
+        }
 
         function updateRecommendationsMultiRunner(analyses) {
             // Use the single-runner recommendations section but show multi-runner comparison
