@@ -15,7 +15,8 @@
       "Bash(sqlite3:*)",
       "Bash(/dev/null)",
       "Read(//tmp/**)",
-      "Read(//home/jasongarcia4/Documents/ultra-smart/templates/**)"
+      "Read(//home/jasongarcia4/Documents/ultra-smart/templates/**)",
+      "Bash(awk:*)"
     ],
     "deny": [],
     "ask": []

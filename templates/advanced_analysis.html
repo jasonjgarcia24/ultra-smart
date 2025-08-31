@@ -135,8 +135,8 @@
                     </div>
                 </div>
 
-                <!-- Fatigue Progression Chart -->
-                <div class="row mb-4">
+                <!-- Fatigue Progression Chart (Hidden for single runner analysis) -->
+                <div class="row mb-4" id="fatigueProgressionSection" style="display: none;">
                     <div class="col-12">
                         <div class="card">
                             <div class="card-header">
@@ -217,7 +217,7 @@
                 </div>
 
                 <!-- Course Impact Analysis -->
-                <div class="row mb-4">
+                <div class="row mb-4" id="courseSegmentPerformanceSection">
                     <div class="col-12">
                         <div class="card">
                             <div class="card-header">
@@ -305,6 +305,9 @@
                                         </div>
                                     </div>
                                 </div>
+                                
+                                <!-- Fatigue Chart -->
+                                <canvas id="fatigueChart" height="100"></canvas>
                                 
                                 <div class="table-responsive">
                                     <table class="table table-striped" id="segmentTable">
@@ -544,6 +547,14 @@
             `).join('');
             
             container.innerHTML = cardsHtml;
+            
+            // Restore selected state for previously selected runners
+            selectedRunners.forEach(runnerId => {
+                const card = document.querySelector(`[data-runner-id="${runnerId}"]`);
+                if (card) {
+                    card.classList.add('selected');
+                }
+            });
         }
 
         function filterRunners() {
@@ -632,13 +643,25 @@
 
         function runAdvancedAnalysis() {
             if (selectedRunners.length === 0) return;
+            console.log('Running analysis for runners:', selectedRunners);
             
             // Collapse runner selection section
             collapseRunnerSelection();
             
+            // Initialize course map when analysis starts
+            initializeCourseMap();
+            
             // Show loading
             document.getElementById('loadingSpinner').style.display = 'block';
             document.getElementById('analysisResults').style.display = 'none';
+            
+            // Immediately hide multi-runner section if switching to single runner analysis
+            if (selectedRunners.length === 1) {
+                const multiDiv = document.getElementById('multiRunnerAnalysis');
+                if (multiDiv) {
+                    multiDiv.style.display = 'none';
+                }
+            }
             
             // Make API call
             fetch('/api/advanced-analysis', {
@@ -698,9 +721,17 @@
         function displaySingleRunnerAnalysis(data) {
             const singleDiv = document.getElementById('singleRunnerAnalysis');
             const multiDiv = document.getElementById('multiRunnerAnalysis');
+            const fatigueSection = document.getElementById('fatigueProgressionSection');
+            const courseSegmentSection = document.getElementById('courseSegmentPerformanceSection');
             
             singleDiv.style.display = 'block';
             multiDiv.style.display = 'none';
+            fatigueSection.style.display = 'none'; // Hide fatigue comparison for single runner
+            
+            // Show individual course segment performance section for single runner
+            if (courseSegmentSection) {
+                courseSegmentSection.style.display = 'block';
+            }
             
             // Show single runner summary cards
             const summaryCards = singleDiv.querySelector('.row .col-12 .card .card-body .row');
@@ -736,15 +767,26 @@
             updateSegmentTable(analysis.course_analysis.segment_analysis);
             updateRestPeriodsList(analysis.rest_periods);
             updateRecommendations(analysis.recommendations);
+            
+            // Create pace elevation chart for single runner (shows pace patterns with rest periods)
+            updateMultiRunnerRestPeriods(data.analyses, data.runner_splits);
         }
 
         function displayMultiRunnerAnalysis(data) {
             const singleDiv = document.getElementById('singleRunnerAnalysis');
             const multiDiv = document.getElementById('multiRunnerAnalysis');
+            const fatigueSection = document.getElementById('fatigueProgressionSection');
+            const courseSegmentSection = document.getElementById('courseSegmentPerformanceSection');
             
             // Show both sections - single contains the main content, multi contains summary
             singleDiv.style.display = 'block';
             multiDiv.style.display = 'block';
+            fatigueSection.style.display = 'block'; // Show fatigue comparison for multi-runner
+            
+            // Hide individual course segment performance section for multi-runner
+            if (courseSegmentSection) {
+                courseSegmentSection.style.display = 'none';
+            }
             
             // Update header to show multi-runner mode
             document.getElementById('analysisRunnerName').textContent = `${selectedRunners.length} Runners - Comparative Analysis`;
@@ -792,6 +834,13 @@
             }
             
             const ctx = document.getElementById('fatigueChart').getContext('2d');
+            
+            // Clear any existing chart
+            const existingChart = Chart.getChart(ctx);
+            if (existingChart) {
+                existingChart.destroy();
+            }
+            
             const progression = fatigueData.fatigue_progression;
             
             // Use dynamic course segments if provided, otherwise fall back to hardcoded
@@ -1326,6 +1375,12 @@
 
         function createMultiRunnerFatigueChart(analyses, courseSegments) {
             const ctx = document.getElementById('multiRunnerFatigueChart').getContext('2d');
+            
+            // Clear any existing chart
+            const existingChart = Chart.getChart(ctx);
+            if (existingChart) {
+                existingChart.destroy();
+            }
             
             // Validate inputs
             if (!analyses || Object.keys(analyses).length === 0) {
@@ -1864,8 +1919,8 @@
         }
 
         function createFatigueChartMultiRunner(analyses, courseSegments) {
-            // Use the single-runner chart canvas but create multi-runner chart
-            const ctx = document.getElementById('fatigueChart').getContext('2d');
+            // Use the multi-runner chart canvas
+            const ctx = document.getElementById('multiRunnerFatigueChart').getContext('2d');
             
             // Validate inputs
             if (!analyses || Object.keys(analyses).length === 0) {
@@ -2132,8 +2187,9 @@
                             </div>
                         </div>
                     </div>
-                </div>
-                
+                </div>`;
+            
+            html += `
                 <div class="row mb-3">
                     <div class="col-12">
                         <h6><i class="fas fa-list"></i> Detailed Rest Period Breakdown</h6>
@@ -2211,23 +2267,9 @@
                     restPeriodsArray: restPeriods
                 });
                 
-                // Special debug for Finn (runner ID 2)
-                if (runnerId == 2 && runner?.first_name === 'Finn') {
-                    console.log('FINN DEBUG - Rest periods around mile 96:');
-                    restPeriods.forEach(rest => {
-                        const mile = rest.mile || rest.start_mile || 0;
-                        if (mile >= 90 && mile <= 100) {
-                            console.log(`Mile ${mile}:`, rest);
-                        }
-                    });
-                }
                 
                 // Add runner info to each rest period
                 restPeriods.forEach(rest => {
-                    // Debug: Log Finn's mile 96 rest specifically
-                    if (runnerId == 2 && (rest.mile >= 95 && rest.mile <= 97)) {
-                        console.log('FOUND FINN MILE 96 REST:', rest);
-                    }
                     allRunnerRestPeriods.push({
                         ...rest,
                         runnerId: runnerId,
@@ -2247,7 +2289,6 @@
                 return aMile - bMile;
             });
             
-            console.log('All runner rest periods (sorted):', allRunnerRestPeriods);
             // Group rest periods by aid station (only group if same aid station)
             allRunnerRestPeriods.forEach(rest => {
                 const restMile = rest.mile || rest.start_mile || 0;
@@ -2266,7 +2307,6 @@
                         break;
                     }
                 }
-                console.log(`Rest at mile ${restMile} (${restAidStation}) added to group:`, addedToGroup);
                 
                 // If not added to any group, create a new group
                 if (!addedToGroup) {
@@ -2280,19 +2320,15 @@
                 const bAvgMile = b.reduce((sum, r) => sum + (r.mile || r.start_mile || 0), 0) / b.length;
                 return aAvgMile - bAvgMile;
             });
-            console.log('Grouped rest periods:', restGroups);
-            console.log('Number of rest groups:', restGroups.length);
             
             // Debug: Log each group with its mile range and runners
             restGroups.forEach((group, index) => {
                 const avgMile = group.reduce((sum, r) => sum + (r.mile || r.start_mile || 0), 0) / group.length;
                 const runnerIds = group.map(r => r.runnerId);
                 const restMiles = group.map(r => `${r.runnerId}:${r.mile || r.start_mile}`);
-                console.log(`Group ${index}: Mile ${avgMile.toFixed(1)}, Runners: ${runnerIds.join(', ')}, RestMiles: ${restMiles.join(', ')}`);
                 
                 // Extra debug for groups around mile 96
                 if (avgMile >= 95 && avgMile <= 97) {
-                    console.log('Mile 96 area group details:', group);
                 }
             });
             
@@ -2421,21 +2457,7 @@
                                 return currentDiff < bestDiff ? current : best;
                             }) : null;
                         
-                        // Debug: Log if this is around mile 96 and involves Finn
-                        if (avgMile >= 95 && avgMile <= 97 && runnerId == 2) {
-                            console.log(`Mile ${avgMile.toFixed(1)} group for Finn (${runnerId}):`, {
-                                groupSize: group.length,
-                                groupRunnerIds: group.map(r => r.runnerId),
-                                allRunnerRests: runnerRests.map(r => ({ mile: r.mile, duration: r.estimated_rest_minutes })),
-                                selectedRest: runnerRest ? { mile: runnerRest.mile, duration: runnerRest.estimated_rest_minutes } : 'none',
-                                foundRunnerRest: !!runnerRest
-                            });
-                        }
                         
-                        console.log(runnerRest ? 
-                            `Rendering rest card for runner ${runnerId} at mile ${runnerRest.mile || runnerRest.start_mile}` : 
-                            `Rendering placeholder for runner ${runnerId} at mile ~${avgMile.toFixed(1)}`
-                        );
                         if (runnerRest) {
                             html += createRestCard(runnerRest, colClass);
                         } else {
@@ -2592,20 +2614,7 @@
                 
                 // Add rest period markers
                 const restPeriods = analysis?.rest_periods?.rest_periods || analysis?.rest_periods || [];
-                console.log(`Runner ${runnerId} (${runner?.first_name}) rest periods:`, restPeriods);
-                
-                // Debug for Finn
-                if (runner.first_name === 'Finn') {
-                    console.log('FINN CHART DEBUG - Rest periods data:', restPeriods);
-                    console.log('FINN CHART DEBUG - Looking for mile 96...');
-                    restPeriods.forEach(rest => {
-                        const mile = rest.mile || rest.start_mile || 0;
-                        if (mile >= 90 && mile <= 100) {
-                            console.log(`Chart Mile ${mile}:`, rest);
-                        }
-                    });
-                }
-                
+                                
                 if (restPeriods.length > 0) {
                     const restMarkers = restPeriods
                         .filter(rest => rest.mile || rest.start_mile)
@@ -3202,16 +3211,6 @@
             }
         }
 
-        // Override the existing runAnalysis button click to initialize map
-        document.addEventListener('DOMContentLoaded', function() {
-            const runAnalysisBtn = document.getElementById('runAnalysis');
-            if (runAnalysisBtn) {
-                runAnalysisBtn.addEventListener('click', function() {
-                    // Initialize course map when analysis starts
-                    initializeCourseMap();
-                });
-            }
-        });
     </script>
 
     <style>
