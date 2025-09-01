@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Analysis - Ultra Smart Analytics</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+</head>
+<body>
+    <div class="container-fluid mt-1">
+        <!-- Header -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h1><i class="fas fa-brain"></i> Advanced Course Dynamics Analysis</h1>
+                        <p class="text-muted">Fatigue modeling, rest detection, and performance optimization</p>
+                    </div>
+                    <div>
+                        <a href="{{ url_for('landing') }}" class="btn btn-outline-primary">
+                            <i class="fas fa-home"></i> Dashboard
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Runner Selection -->
+        <div class="row mb-4" id="runnerSelectionSection">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5><i class="fas fa-users"></i> Select Runners for Analysis</h5>
+                        <button id="collapseSelectionBtn" class="btn btn-sm btn-primary" style="display: none;" onclick="toggleRunnerList()">
+                            <i class="fas fa-chevron-down"></i> Show Runner Selection
+                        </button>
+                    </div>
+                    <div class="card-body" id="runnerSelectionBody">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <input type="text" id="searchInput" class="form-control mb-3" 
+                                       placeholder="Search runners by name, city, state, or bib number...">
+                            </div>
+                            <div class="col-md-4">
+                                <button id="runAnalysis" class="btn btn-success btn-lg w-100" disabled></button>
+                            </div>
+                        </div>
+                        
+                        <div class="row" id="runnerResults">
+                            <!-- Runner cards will be populated here -->
+                        </div>
+                        
+                        <div id="selectedRunners" class="mt-3" style="display: none;">
+                            <h6>Selected for Analysis:</h6>
+                            <div id="selectedRunnersList" class="d-flex flex-wrap gap-2">
+                                <!-- Selected runners will appear here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Course Map -->
+        <div class="row mb-4" id="courseMapSection" style="display: none;">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-map"></i> Cocodona 250 Course Map</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="courseMap" style="height: 500px; width: 100%;"></div>
+                        <div class="mt-2">
+                            <small class="text-muted">Interactive course map with aid stations. GPX data: 256.2 miles, 27 waypoints.</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Analysis Results -->
+        <div id="analysisResults" style="display: none;">
+            <!-- Single Runner Analysis -->
+            <div id="singleRunnerAnalysis" style="display: none;">
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h5><i class="fas fa-user-circle"></i> Advanced Performance Analysis - <span id="analysisRunnerName"></span></h5>
+                                <button class="btn btn-sm btn-outline-primary" onclick="startNewAnalysis()">
+                                    <i class="fas fa-plus"></i> New Analysis
+                                </button>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <div class="card bg-light">
+                                            <div class="card-body text-center">
+                                                <h6><i class="fas fa-battery-half"></i> Average Fatigue Factor</h6>
+                                                <h4 id="avgFatigue" class="text-warning">-</h4>
+                                                <small class="text-muted">1.0 = Expected pace</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="card bg-light">
+                                            <div class="card-body text-center">
+                                                <h6><i class="fas fa-mountain"></i> Strongest Terrain</h6>
+                                                <h4 id="strongestTerrain" class="text-success">-</h4>
+                                                <small class="text-muted">Best performance type</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="card bg-light">
+                                            <div class="card-body text-center">
+                                                <h6><i class="fas fa-pause-circle"></i> Rest Periods</h6>
+                                                <h4 id="restPeriods" class="text-info">-</h4>
+                                                <small class="text-muted">Detected stops</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Fatigue Progression Chart (Hidden for single runner analysis) -->
+                <div class="row mb-4" id="fatigueProgressionSection" style="display: none;">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5><i class="fas fa-chart-line"></i> Fatigue Progression Comparison</h5>
+                                <!-- Fatigue Progression Explanation (Collapsible) -->
+                                <div class="mb-3">
+                                    <button class="btn btn-outline-info btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#fatigueProgressionExplanation" aria-expanded="false" aria-controls="fatigueProgressionExplanation">
+                                        <i class="fas fa-info-circle"></i> Understanding Fatigue Progression
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="card-body">                                
+                                <div class="collapse mb-4" id="fatigueProgressionExplanation">
+                                    <div class="card border-info">
+                                        <div class="card-body">
+                                            <h6 class="card-title text-info"><i class="fas fa-battery-quarter"></i> How Fatigue Progression Works</h6>
+                                            <p class="small mb-3">
+                                                <strong>Fatigue progression tracks how runners' energy levels change throughout the race</strong> by analyzing pace slowdown 
+                                                compared to expected performance based on terrain difficulty and race position.
+                                            </p>
+                                            
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <h6 class="small fw-bold">Fatigue Factors:</h6>
+                                                    <ul class="small mb-3">
+                                                        <li><strong>Terrain Impact:</strong> Elevation gain, technical sections</li>
+                                                        <li><strong>Distance Covered:</strong> Cumulative mileage effects</li>
+                                                        <li><strong>Time of Day:</strong> Heat, darkness, circadian rhythm</li>
+                                                        <li><strong>Nutrition/Hydration:</strong> Energy management over time</li>
+                                                    </ul>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <h6 class="small fw-bold">Reading the Chart:</h6>
+                                                    <ul class="small mb-3">
+                                                        <li><strong>Higher values:</strong> More fatigue, slower than expected</li>
+                                                        <li><strong>Lower values:</strong> Less fatigue, maintaining pace well</li>
+                                                        <li><strong>Sharp increases:</strong> Sudden energy drops or challenges</li>
+                                                        <li><strong>Plateaus:</strong> Steady state or recovery periods</li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="alert alert-light mb-0">
+                                                <small><i class="fas fa-lightbulb text-warning"></i> 
+                                                <strong>Strategy Tip:</strong> Compare different runners' fatigue patterns to identify optimal pacing strategies 
+                                                and critical sections where energy management becomes crucial.</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <canvas id="multiRunnerFatigueChart" height="100"></canvas>
+                                
+                                    
+                                    <!-- Aid Station Legend -->
+                                    <div class="mt-3">
+                                        <h6 class="mb-2"><i class="fas fa-first-aid"></i> Aid Stations:</h6>
+                                        <div class="d-flex align-items-center gap-3 flex-wrap">
+                                            <div class="d-flex align-items-center">
+                                                <div style="width: 20px; height: 3px; background-color: #4ecdc4; border-radius: 2px;" class="me-2"></div>
+                                                <span class="badge bg-light text-dark">🏃 Aid Stations</span>
+                                            </div>
+                                            <div class="d-flex align-items-center">
+                                                <div style="width: 20px; height: 3px; background-color: #17a2b8; border-radius: 2px;" class="me-2"></div>
+                                                <span class="badge bg-light text-dark">💧 Water Stations</span>
+                                            </div>
+                                            <div class="d-flex align-items-center">
+                                                <div style="width: 20px; height: 3px; background-color: #ff6b6b; border-radius: 2px;" class="me-2"></div>
+                                                <span class="badge bg-light text-dark">🛏️ Sleep Stations (Sedona Posse Grounds, Fort Tuthill)</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Course Segment Performance -->
+                <div class="row mb-4" id="courseSegmentPerformanceSection">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h5 class="mb-1"><i class="fas fa-route"></i> Course Segment Performance</h5>
+                                    <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#segmentPerformanceContent" aria-expanded="true" aria-controls="segmentPerformanceContent">
+                                        <i class="fas fa-chevron-up"></i> <span class="d-none d-md-inline">Collapse</span>
+                                    </button>
+                                </div>
+                                <!-- Performance Score Explanation (Collapsible) -->
+                                <div class="mb-3">
+                                    <button class="btn btn-outline-info btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#performanceExplanation" aria-expanded="false" aria-controls="performanceExplanation">
+                                        <i class="fas fa-info-circle"></i> Understanding Performance Scores
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="collapse show" id="segmentPerformanceContent">
+                                
+                                <div class="collapse mb-4" id="performanceExplanation">
+                                    <div class="card border-info">
+                                        <div class="card-body">
+                                            <h6 class="card-title text-info"><i class="fas fa-chart-line"></i> How Performance Scores Work</h6>
+                                            <p class="small mb-3">
+                                                <strong>Performance scores compare this runner against all other runners in the field</strong> on each segment, 
+                                                not just their individual performance. This shows competitive performance rather than personal pacing.
+                                            </p>
+                                            
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <h6 class="small fw-bold">Comparative Benchmarks:</h6>
+                                                    <ul class="small mb-3">
+                                                        <li><strong>Segment Leader:</strong> Fastest pace achieved by any runner on that segment</li>
+                                                        <li><strong>Race Winner:</strong> How the overall race winner performed on that segment</li>
+                                                        <li><strong>Field Average:</strong> Average pace of all runners on that segment</li>
+                                                    </ul>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <h6 class="small fw-bold">Score Interpretation:</h6>
+                                                    <ul class="small mb-3">
+                                                        <li><span class="text-success fw-bold">80-100%:</span> Excellent (top 20%)</li>
+                                                        <li><span class="text-warning fw-bold">60-80%:</span> Good (above average)</li>
+                                                        <li><span class="text-primary fw-bold">40-60%:</span> Average (middle of pack)</li>
+                                                        <li><span class="text-danger fw-bold">0-40%:</span> Below average</li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="mt-4">
+                                                <h6 class="small fw-bold">Difficulty Rating Calculation:</h6>
+                                                <div class="row">
+                                                    <div class="col-md-6">
+                                                        <p class="small mb-2"><strong>Primary Factor - Elevation Gain:</strong></p>
+                                                        <ul class="small mb-3">
+                                                            <li><strong>Very Steep</strong> (&gt;400 ft/mile): +1.8 ⭐</li>
+                                                            <li><strong>Steep</strong> (250-400 ft/mile): +1.2 ⭐</li>
+                                                            <li><strong>Moderate</strong> (150-250 ft/mile): +0.8 ⭐</li>
+                                                            <li><strong>Gentle</strong> (75-150 ft/mile): +0.4 ⭐</li>
+                                                            <li><strong>Flat</strong> (&lt;25 ft/mile): -0.2 ⭐</li>
+                                                        </ul>
+                                                        
+                                                        <p class="small mb-2"><strong>Additional Elevation Factors:</strong></p>
+                                                        <ul class="small mb-3">
+                                                            <li><strong>Steep Descents</strong> (&gt;300 ft/mile): +0.6 ⭐</li>
+                                                            <li><strong>Rolling Terrain</strong> (high gain + loss): +0.4 ⭐</li>
+                                                        </ul>
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <p class="small mb-2"><strong>Other Factors:</strong></p>
+                                                        <ul class="small mb-3">
+                                                            <li><strong>Performance Data:</strong> How much runners slow down historically</li>
+                                                            <li><strong>Segment Distance:</strong> Longer segments (+0.3-0.5 ⭐)</li>
+                                                            <li><strong>Race Position:</strong> Late race fatigue (+0.3-0.8 ⭐)</li>
+                                                            <li><strong>Aid Station Types:</strong> Sleep stations, medical, gear checks</li>
+                                                            <li><strong>Known Challenges:</strong> Mingus Mountain, Wildcat Hill, etc.</li>
+                                                        </ul>
+                                                    </div>
+                                                </div>
+                                                
+                                                <div class="alert alert-light mb-0">
+                                                    <small><i class="fas fa-mountain text-primary"></i> 
+                                                    <strong>Star Rating Scale:</strong> ⭐ Very Easy (1.0-1.5) | ⭐⭐ Easy (1.5-2.5) | ⭐⭐⭐ Moderate (2.5-3.5) | ⭐⭐⭐⭐ Hard (3.5-4.5) | ⭐⭐⭐⭐⭐ Extreme (4.5-5.0)</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Fatigue Chart -->
+                                <canvas id="fatigueChart" height="100"></canvas>
+                                
+                                <div class="table-responsive">
+                                    <table class="table table-striped" id="segmentTable">
+                                        <thead>
+                                            <tr>
+                                                <th>Segment</th>
+                                                <th>Miles</th>
+                                                <th>Terrain</th>
+                                                <th>Difficulty</th>
+                                                <th>Avg Pace</th>
+                                                <th>Performance Score</th>
+                                                <th>Elevation</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <!-- Segment data will be populated here -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                                </div> <!-- End segmentPerformanceContent collapse -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Rest Period Details -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5><i class="fas fa-clock"></i> Detected Rest Periods</h5>
+                                
+                                <!-- Rest Period Detection Explanation (Collapsible) -->
+                                <div class="mb-3">
+                                    <button class="btn btn-outline-info btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#restPeriodExplanationSingle" aria-expanded="false" aria-controls="restPeriodExplanationSingle">
+                                        <i class="fas fa-info-circle"></i> Understanding Rest Period Detection
+                                    </button>
+                                </div>
+                                
+                                <div class="collapse mb-4" id="restPeriodExplanationSingle">
+                                    <div class="card border-info">
+                                        <div class="card-body">
+                                            <h6 class="card-title text-info"><i class="fas fa-pause-circle"></i> How Rest Period Detection Works</h6>
+                                            <p class="small mb-3">
+                                                <strong>Rest periods are automatically detected using pace analysis</strong> to identify when runners 
+                                                significantly slow down compared to their surrounding splits.
+                                            </p>
+                                            
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <h6 class="small text-primary"><i class="fas fa-stopwatch"></i> Detection Criteria</h6>
+                                                    <ul class="small mb-3">
+                                                        <li><strong>Primary Threshold:</strong> Pace >50% slower than surrounding splits</li>
+                                                        <li><strong>Context Window:</strong> Analyzes 3 splits before and after current split</li>
+                                                        <li><strong>Aid Station Correlation:</strong> Within 5-mile radius of aid stations</li>
+                                                        <li><strong>Valid Data:</strong> Requires valid pace data for analysis</li>
+                                                    </ul>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <h6 class="small text-primary"><i class="fas fa-calculator"></i> Example Calculation</h6>
+                                                    <ul class="small mb-3">
+                                                        <li>Surrounding splits average: 12 min/mile</li>
+                                                        <li>Threshold for rest period: >18 min/mile (12 × 1.5)</li>
+                                                        <li>25 min/mile split = significant rest period</li>
+                                                        <li>Duration estimated from pace differential</li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="alert alert-light border-0 small">
+                                                <i class="fas fa-lightbulb text-warning"></i> 
+                                                <strong>Note:</strong> The pace chart shows all pace variations, while the cards below 
+                                                show only significant rest periods that meet the 50% threshold and correlate with aid station locations.
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div id="restPeriodsList">
+                                    <!-- Rest periods will be populated here -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pacing Recommendations -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5><i class="fas fa-lightbulb"></i> Race Strategy Recommendations</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-8">
+                                        <h6>Overall Strategy</h6>
+                                        <div class="alert alert-info" id="overallStrategy">
+                                            <!-- Strategy will be populated here -->
+                                        </div>
+                                        
+                                        <h6>Segment Recommendations</h6>
+                                        <div class="table-responsive">
+                                            <table class="table table-sm" id="recommendationsTable">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Segment</th>
+                                                        <th>Miles</th>
+                                                        <th>Effort Level</th>
+                                                        <th>Strategy</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <!-- Recommendations will be populated here -->
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <h6>Critical Segments</h6>
+                                        <div id="criticalSegments" class="list-group">
+                                            <!-- Critical segments will be populated here -->
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Multi-Runner Comparison -->
+            <div id="multiRunnerAnalysis" style="display: none;">
+                <!-- Summary Cards Row -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h5><i class="fas fa-users"></i> Multi-Runner Advanced Comparison</h5>
+                                <button class="btn btn-sm btn-outline-primary" onclick="startNewAnalysis()">
+                                    <i class="fas fa-plus"></i> New Analysis
+                                </button>
+                            </div>
+                            <div class="card-body">
+                                <!-- Performance summary table -->
+                                <div class="table-responsive">
+                                    <table class="table table-striped" id="multiRunnerTable">
+                                        <thead>
+                                            <tr>
+                                                <th>Runner</th>
+                                                <th>Avg Fatigue</th>
+                                                <th>Peak Fatigue Mile</th>
+                                                <th>Rest Periods</th>
+                                                <th>Best Terrain</th>
+                                                <th>Elevation Tolerance</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <!-- Multi-runner data will be populated here -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Loading Spinner -->
+        <div id="loadingSpinner" style="display: none;" class="text-center">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Analyzing...</span>
+            </div>
+            <p class="mt-2">Running advanced analysis...</p>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script type="module">
+        import { RunnerAnalyses, Runners } from '/static/js/runner.js';
+        import { AnalysisButton } from '/static/js/utils/analysisActions.js';
+        import { SingleRunnerAnalysis, MutipleRunnerAnalysis } from '/static/js/displays.js';
+
+        const runners = new Runners();
+        const analysisButton = new AnalysisButton();
+        let runnerAnalyses = new RunnerAnalyses();
+        let singleDisplay = new SingleRunnerAnalysis();
+        let multiDisplay = new MutipleRunnerAnalysis();
+
+        // Setup runner selection callback to update analysis button state
+        runners.runnerSelectionAction = () => { analysisButton.update(runners); };
+        runners.runnerSelectionAction(); // Initial update
+
+        // Load runners on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            runners.loadRunners();
+            setupEventListeners();
+        });
+
+        function setupEventListeners() {
+            // Setup search input listener
+            document.getElementById('searchInput').addEventListener('input', runners.filterRunners);
+            
+            // Setup analysis button listener
+            analysisButton.button.addEventListener('click', runAdvancedAnalysis);
+        }
+
+        function runAdvancedAnalysis() {
+            if (runners.selectedRunners.length === 0) return;
+            console.log('Running analysis for runners:', runners.selectedRunners);
+            
+            // Collapse runner selection section
+            collapseRunnerSelection();
+            
+            // Initialize course map when analysis starts
+            initializeCourseMap();
+            
+            // Show loading
+            document.getElementById('loadingSpinner').style.display = 'block';
+            document.getElementById('analysisResults').style.display = 'none';
+            
+            // Immediately hide multi-runner section if switching to single runner analysis
+            if (runners.selectedRunners.length === 1) {
+                const multiDiv = document.getElementById('multiRunnerAnalysis');
+                if (multiDiv) {
+                    multiDiv.style.display = 'none';
+                }
+            }
+            
+            // Make API call
+            fetch('/api/advanced-analysis', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    runner_ids: runners.selectedRunners
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                // Set runner analysis
+                runnerAnalyses = null;
+                runnerAnalyses = new RunnerAnalyses(data);
+                console.log('Analysis response:', runnerAnalyses);
+
+                try {
+                    displayAnalysisResults(runnerAnalyses);
+                } catch (displayError) {
+                    console.error('Error displaying results:', displayError);
+                    // Only show alert if results aren't displayed
+                    if (document.getElementById('analysisResults').style.display !== 'block') {
+                        alert('Error displaying analysis results. Please try again.');
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error running analysis:', error);
+                // Only show alert if it's a network/API error, not a display error
+                if (error.message.includes('HTTP error') || error.message.includes('Analysis failed')) {
+                    alert('Error running analysis. Please try again.');
+                }
+            })
+            .finally(() => {
+                document.getElementById('loadingSpinner').style.display = 'none';
+            });
+        }
+
+        function displayAnalysisResults() {
+            document.getElementById('analysisResults').style.display = 'block';
+            
+            if (runners.selectedRunners.length === 1) {
+                singleDisplay.init(runnerAnalyses, runners);
+            } else {
+                multiDisplay.init(runnerAnalyses, runners);
+                // displayMultiRunnerAnalysis();
+            }
+        }
+        
+        function toggleRestPeriods(runnerId, button) {
+            const hiddenContainer = document.querySelector(`[data-runner-id="${runnerId}"] .hidden-rest-periods`);
+            const icon = button.querySelector('i');
+            
+            if (hiddenContainer.style.display === 'none') {
+                // Show hidden rest periods
+                hiddenContainer.style.display = 'block';
+                button.innerHTML = '<i class="fas fa-chevron-up"></i> Show less';
+                icon.classList.remove('fa-chevron-down');
+                icon.classList.add('fa-chevron-up');
+            } else {
+                // Hide rest periods
+                hiddenContainer.style.display = 'none';
+                const hiddenCount = hiddenContainer.children.length;
+                button.innerHTML = `<i class="fas fa-chevron-down"></i> Show ${hiddenCount} more rest periods`;
+            }
+        }
+
+        function toggleAllRestGroups(button) {
+            const hiddenGroups = document.querySelectorAll('.hidden-rest-group');
+            const icon = button.querySelector('i');
+            
+            if (hiddenGroups.length > 0 && hiddenGroups[0].style.display === 'none') {
+                // Show hidden rest groups
+                hiddenGroups.forEach(group => group.style.display = 'flex');
+                button.innerHTML = '<i class="fas fa-chevron-up"></i> Show less rest locations';
+            } else {
+                // Hide rest groups
+                hiddenGroups.forEach(group => group.style.display = 'none');
+                const hiddenCount = hiddenGroups.length;
+                button.innerHTML = `<i class="fas fa-chevron-down"></i> Show ${hiddenCount} more rest locations`;
+            }
+        }
+
+        function updateMultiRunnerRecommendations(analyses) {
+            const container = document.getElementById('multiRunnerRecommendations');
+            
+            if (!container) {
+                console.error('Multi-runner recommendations container not found');
+                return;
+            }
+            
+            if (!analyses || Object.keys(analyses).length === 0) {
+                container.innerHTML = '<p class="text-center text-muted">No strategy recommendations available</p>';
+                return;
+            }
+            
+            // Find common recommendations across runners
+            const allRecommendations = runners.selectedRunners.map(runnerId => {
+                const analysis = analyses[runnerId];
+                const runner = runners.allRunners.find(r => r.id === runnerId);
+                return {
+                    runner: runner,
+                    recommendations: analysis?.recommendations || {}
+                };
+            });
+            
+            let html = '<div class="row mb-4">';
+            
+            // Overall strategy comparison
+            html += '<div class="col-12"><h6>Overall Strategy Comparison</h6></div>';
+            allRecommendations.forEach(rec => {
+                html += `
+                    <div class="col-md-6 mb-3">
+                        <div class="alert alert-primary">
+                            <strong>${rec.runner.first_name} ${rec.runner.last_name}:</strong><br>
+                            <small>${rec.recommendations.overall_strategy || 'No strategy recommendations available'}</small>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+            
+            // Critical segments comparison
+            if (allRecommendations[0]?.recommendations?.critical_segments) {
+                html += `
+                    <div class="row">
+                        <div class="col-12">
+                            <h6>Common Critical Segments</h6>
+                            <div class="alert alert-warning">
+                                <strong>Focus Areas for All Runners:</strong><br>
+                                ${allRecommendations[0].recommendations.critical_segments.slice(0, 5).join(', ')}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            container.innerHTML = html;
+        }
+
+        function collapseRunnerSelection() {
+            const selectionBody = document.getElementById('runnerSelectionBody');
+            const collapseBtn = document.getElementById('collapseSelectionBtn');
+            
+            // Add transition effect
+            selectionBody.style.transition = 'all 0.3s ease';
+            selectionBody.style.opacity = '0';
+            
+            setTimeout(() => {
+                selectionBody.style.display = 'none';
+                collapseBtn.style.display = 'inline-block';
+                collapseBtn.innerHTML = '<i class="fas fa-chevron-down"></i> Show Runner Selection';
+            }, 300);
+        }
+
+        function toggleRunnerList() {
+            const selectionBody = document.getElementById('runnerSelectionBody');
+            const collapseBtn = document.getElementById('collapseSelectionBtn');
+            
+            if (selectionBody.style.display === 'none' || window.getComputedStyle(selectionBody).display === 'none') {
+                // Show selection
+                selectionBody.style.display = 'block';
+                selectionBody.style.opacity = '0';
+                setTimeout(() => {
+                    selectionBody.style.opacity = '1';
+                }, 10);
+                collapseBtn.innerHTML = '<i class="fas fa-chevron-up"></i> Hide Runner Selection';
+            } else {
+                // Hide selection
+                selectionBody.style.opacity = '0';
+                setTimeout(() => {
+                    selectionBody.style.display = 'none';
+                }, 300);
+                collapseBtn.innerHTML = '<i class="fas fa-chevron-down"></i> Show Runner Selection';
+            }
+        }
+
+        function startNewAnalysis() {
+            console.log('Starting new analysis - resetting state');
+
+            // Clear current selections and results
+            runners.clearSelections();
+            
+            // Hide analysis results
+            document.getElementById('analysisResults').style.display = 'none';
+            
+            // Show and expand runner selection
+            const selectionBody = document.getElementById('runnerSelectionBody');
+            const collapseBtn = document.getElementById('collapseSelectionBtn');
+            
+            selectionBody.style.display = 'block';
+            selectionBody.style.opacity = '1';
+            collapseBtn.style.display = 'none';
+            
+            // Clear search and update displays
+            document.getElementById('searchInput').value = '';
+            runners.displayRunners();
+        }
+
+        // Course Map functionality
+        let courseMap = null;
+        let courseMapData = null;
+
+        function initializeCourseMap() {
+            if (courseMap) {
+                return; // Map already initialized
+            }
+
+            // Show the course map section
+            document.getElementById('courseMapSection').style.display = 'block';
+
+            // Initialize map
+            courseMap = L.map('courseMap').setView([34.5, -111.9], 8);
+
+            // Add OpenStreetMap tile layer
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(courseMap);
+
+            // Load and display course data
+            loadCourseMapData();
+        }
+
+        async function loadCourseMapData() {
+            try {
+                const response = await fetch('/api/course_map_data');
+                courseMapData = await response.json();
+
+                if (courseMapData.error) {
+                    console.error('Course map data error:', courseMapData.error);
+                    return;
+                }
+
+                // Draw course track
+                if (courseMapData.track_points && courseMapData.track_points.length > 0) {
+                    const trackCoordinates = courseMapData.track_points.map(point => [point[0], point[1]]);
+                    
+                    const courseTrack = L.polyline(trackCoordinates, {
+                        color: '#e74c3c',
+                        weight: 4,
+                        opacity: 0.8
+                    }).addTo(courseMap);
+
+                    // Fit map to track bounds
+                    if (courseMapData.bounds) {
+                        courseMap.fitBounds([
+                            [courseMapData.bounds.south, courseMapData.bounds.west],
+                            [courseMapData.bounds.north, courseMapData.bounds.east]
+                        ], { padding: [20, 20] });
+                    }
+                }
+
+                // Add aid station markers
+                if (courseMapData.waypoints && courseMapData.waypoints.length > 0) {
+                    courseMapData.waypoints.forEach(waypoint => {
+                        const isStart = waypoint.name.includes('Start');
+                        const isFinish = waypoint.name.includes('Finish');
+                        
+                        let markerColor = '#3498db'; // Default blue for aid stations
+                        let icon = '🏃';
+                        
+                        if (isStart) {
+                            markerColor = '#27ae60'; // Green for start
+                            icon = '🟢';
+                        } else if (isFinish) {
+                            markerColor = '#e74c3c'; // Red for finish
+                            icon = '🏁';
+                        } else if (waypoint.name.includes('Water Station')) {
+                            markerColor = '#3498db'; // Blue for water stations
+                            icon = '💧';
+                        } else {
+                            icon = '🏕️'; // Tent for aid stations
+                        }
+
+                        const marker = L.circleMarker([waypoint.lat, waypoint.lon], {
+                            radius: isStart || isFinish ? 10 : 8,
+                            fillColor: markerColor,
+                            color: '#fff',
+                            weight: 2,
+                            opacity: 1,
+                            fillOpacity: 0.8
+                        }).addTo(courseMap);
+
+                        // Create popup content
+                        let popupContent = `<div style="font-size: 14px;">
+                            <strong>${icon} ${waypoint.name}</strong><br>`;
+                        
+                        if (waypoint.mile) {
+                            popupContent += `📍 Mile ${waypoint.mile.toFixed(1)}<br>`;
+                        }
+                        
+                        if (waypoint.elevation) {
+                            popupContent += `⛰️ ${waypoint.elevation.toFixed(0)}ft elevation<br>`;
+                        }
+                        
+                        popupContent += `📍 ${waypoint.lat.toFixed(4)}, ${waypoint.lon.toFixed(4)}`;
+                        popupContent += `</div>`;
+
+                        marker.bindPopup(popupContent);
+                    });
+                }
+
+            } catch (error) {
+                console.error('Error loading course map data:', error);
+            }
+        }
+
+        // Make functions globally accessible for onclick handlers
+        window.toggleRunnerList = toggleRunnerList;
+        window.startNewAnalysis = startNewAnalysis;
+        window.toggleAllRestGroups = toggleAllRestGroups;
+    </script>
+
+    <style>
+        .runner-card {
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 2px solid transparent;
+        }
+        
+        .runner-card:hover {
+            border-color: #007bff;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        
+        .runner-card.selected {
+            border-color: #28a745;
+            background-color: #f8f9fa;
+        }
+        
+        .difficulty-stars {
+            cursor: help;
+            color: #ffc107;
+            font-weight: bold;
+            transition: color 0.2s ease;
+            text-decoration: none;
+        }
+        
+        .difficulty-stars:hover {
+            color: #ff9800;
+            text-shadow: 0 0 3px rgba(255, 193, 7, 0.5);
+        }
+        
+        /* Left-align tooltip content */
+        .tooltip-inner {
+            text-align: left !important;
+        }
+        
+        .progress {
+            font-size: 0.75rem;
+        }
+        
+        .alert {
+            margin-bottom: 0.5rem;
+        }
+    </style>
+</body>
+</html>

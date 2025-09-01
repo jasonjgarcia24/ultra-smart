@@ -1220,7 +1220,7 @@ def debug_page():
 @app.route('/advanced-analysis')
 def advanced_analysis_page():
     """Advanced analysis page with course dynamics"""
-    return render_template('advanced_analysis.html')
+    return render_template('advanced_analysis/advanced_analysis.html')
 
 @app.route('/api/advanced-analysis', methods=['POST'])
 def api_advanced_analysis():
@@ -1271,7 +1271,7 @@ def api_advanced_analysis():
         
     except Exception as e:
         print(f"Advanced analysis error: {e}")
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'status': 'failed', 'error': str(e)}), 500
 
 @app.route('/api/course_map_data')
 def get_course_map_data():
